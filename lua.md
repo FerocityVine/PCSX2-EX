@@ -1,5 +1,7 @@
 # LuaEngine Documentation v2.0
 
+---
+
 ## What is LuaEngine?
 
 LuaEngine is a version of Lua running within PCSX2-EX, powered by sol2. It allows for the use of Lua scripts as a method of modifying any game in question.
