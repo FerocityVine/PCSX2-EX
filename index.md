@@ -24,7 +24,7 @@ TL;DR - Drama and incompetence.
 
 Documentation is available and it is actively being updated. <br/>
 [Click Here](https://topaz-reality.github.io/PCSX2-EX/lua) for LuaEngine Documentation. <br/>
-[Click Here](https://topaz-reality.github.io/PCSX2-EX/expatch) for ExPATCH Documentation. <br/>
+[Click Here](https://topaz-reality.github.io/PCSX2-EX/expatch) for ExPATCH Documentation.
 <br/><br/>
 
 ## How can I contribute?
