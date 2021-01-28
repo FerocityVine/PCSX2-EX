@@ -22,12 +22,15 @@ TL;DR - Drama and incompetence.
 
 ## Where can I learn about LuaEngine and ExPATCH?
 
-Documentation is being written and revised. Coming soon!
+Documentation is available and it is actively being updated.
+<br/><br/>
+[Click Here](https://topaz-reality.github.io/PCSX2-EX/lua) for LuaEngine Documentation. <br/>
+[Click Here](https://topaz-reality.github.io/PCSX2-EX/expatch) for ExPATCH Documentation.
 <br/><br/>
 
 ## How can I contribute?
 
-Well, great question! If you want to add a feature or fix something, fork my rpoject and PR it to me! 9 times out of 10, it will be approved!
+Well, great question! If you want to add a feature or fix something, fork my project and PR it to me! 9 times out of 10, it will be approved!
 <br/><br/>
 
 ## Where can I get PCSX2-EX?
