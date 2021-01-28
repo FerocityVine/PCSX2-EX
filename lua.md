@@ -48,7 +48,7 @@ for x86 and with Lua 5.4, and on the platform that you are on, with the copiler 
 
 ## LuaEngine Cheatsheet
 
-## Global Variables
+### Global Variables
 
 - ``GAME_ID`` => Returns the current game's CRC32 checksum as an integer. Ex: ``0xF266B00B``
 - ``SCRIPT_PATH`` => Returns the path which Lua scripts are loaded from as a string. Ex: ``"C:\Users\Topaz\Documents\PCSX2\lua"``
@@ -56,7 +56,7 @@ for x86 and with Lua 5.4, and on the platform that you are on, with the copiler 
 - ``ENGINE_VERSION`` => Returns the LuaEngine's version as a float. Ex: ``2.0``
 
 
-## ReadXXXX(Address)
+###  ReadXXXX(Address)
 
 Reads a certain value from **Address**. Returns the read value. 
 The "**XXXX**" is a placeholder for the value type.
@@ -68,7 +68,7 @@ Example:
     local _tempByte = ReadByte(0xB007555) -- Read a byte from address 0xB007555
 ```
 
-## WriteXXXX(Address, Value)
+### WriteXXXX(Address, Value)
 
 Writes **Value** to **Address**. 
 The "**XXXX**" is a placeholder for the value type.
@@ -80,7 +80,7 @@ Example:
     WriteBoolean(0xB007555, true) -- Write true to 0xB007555
 ```
 
-## ReadArray(Address, Length)
+### ReadArray(Address, Length)
 
 Reads **Length** amount of bytes from memory, starting at **Address**. Returns the read bytes as an array.
 
@@ -89,7 +89,7 @@ Example:
     local _tempArray = ReadArray(0xBEEFDED, 0x10) -- Reads 16 bytes starting at 0xBEEFDED
 ```
 
-## WriteArray(Address, Array)
+### WriteArray(Address, Array)
 
 Writes **Array** to the memory, starting at **Address**. The array must be made of bytes (8-bit integers).
 
@@ -99,7 +99,7 @@ Example:
     WriteArray(0x6660420, _tempArray) -- Writes _tempArray to memory, starting at 0x6660420
 ```
 
-## ReadFile(FileName)
+### ReadFile(FileName)
 
 Reads the file "**lua/io_load/FileName**" to an array.
 
@@ -107,7 +107,7 @@ Example:
 ```lua
     local _tempFile = ReadFile("killMePl0x.kek") -- Reads the file at lua/io_load/killMePl0x.kek to _tempFile. Re-reading the file is unnecessary from this point.
 ```
-## ReadFile(FileName, Offset, Size)
+### ReadFile(FileName, Offset, Size)
 
 Reads the **Size** bytes from "**lua/io_load/FileName**" to an array, starting from **Offset** .
 
@@ -115,7 +115,7 @@ Example:
 ```lua
     local _tempFile = ReadFile("killMePl0x.kek", 0x0069, 0x0420) -- Reads 0x0420 bytes from the file at lua/io_load/killMePl0x.kek to _tempFile, starting from 0x0069
 ```
-## GetPointer(Address, Offset)
+### GetPointer(Address, Offset)
 
 Calculates a pointer with the given values. Basically, reads the value at **Address** and adds **Offset** to it. Returns the resulting value.
 
@@ -124,7 +124,7 @@ Example:
     local _tempPointer = GetPointer(0xBEEFDAD, 0x15) -- Reads the value at 0xBEEFDAD and adds 0x15 to it.
 ```
 
-## ConsolePrint(Message, Color = 1)
+### ConsolePrint(Message, Color = 1)
 
 Prints unto the PCSX2-EX console. The color is normally 1.
 
@@ -136,4 +136,4 @@ Example:
     ConsolePrint("Howdy partner?", 0x05) -- Prints to the PCSX2-EX Console: "Howdy partner?" in Magenta.
 ```
 
-### Any functions present in this document signify v2.25.0 compatibility. Any function absent in this document is no longer supported and should be considered obsolete.
+#### * Any functions present in this document signify v2.25.0 compatibility. Any function absent in this document is no longer supported and should be considered obsolete.
