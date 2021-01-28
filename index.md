@@ -19,6 +19,3 @@ TL;DR - Drama and incompetence.
 
 ## Where can I learn about LuaEngine and ExPATCH?
 Documentation is being written and revised. Coming soon!
-
-## Where can I get PCSX2-EX?
-The latest release build is at the top of this page.
