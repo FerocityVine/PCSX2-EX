@@ -48,6 +48,8 @@ for x86 and with Lua 5.4, and on the platform that you are on, with the copiler 
 
 ## LuaEngine Cheatsheet
 
+---
+
 ### Global Variables
 
 - ``GAME_ID`` => Returns the current game's CRC32 checksum as an integer. Ex: ``0xF266B00B``
