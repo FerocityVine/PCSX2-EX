@@ -22,10 +22,16 @@ For example; For Kingdom Hearts 2 Final Mix, it would be "**F266B00B.lua**".
 Inside the file, copy and paste this snippet:
 
 ```lua
+function _OnBoot()
+   -- Code here executes on game boot.
+end
+
 function _OnInit()
+   -- Code here executes on script load.
 end
 
 function _OnFrame()
+   -- Code here executes on every frame.
 end
 ```
 
