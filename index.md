@@ -18,4 +18,13 @@ In addition to those, PCSX2-EX also includes:
 TL;DR - Drama and incompetence.
 
 ## Where can I learn about LuaEngine and ExPATCH?
+
 Documentation is being written and revised. Coming soon!
+
+## How can I contribute?
+
+Well, great question! If you want to add a feature or fix something, fork my rpoject and PR it to me! 9 times out of 10, it will be approved!
+
+## Where can I get PCSX2-EX?
+
+The latest release [v2.20.0] can be found [here](https://github.com/Topaz-Reality/PCSX2-EX/releases/tag/v2.25.0).
