@@ -1,37 +1,24 @@
-## Welcome to GitHub Pages
+## What is PCSX2-EX?
 
-You can use the [editor on GitHub](https://github.com/Topaz-Reality/PCSX2-EX/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+Simply put: PCSX2-EX is an extended version of PCSX2, with improvements to it's performance and modification abilities.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## What is the diference between PCSX2 and PCSX2-EX?
 
-### Markdown
+For starters, PCSX2-EX does **not** recieve updates like PCSX2 does. PCSX2-EX is based on one set version depending on the feedback from it's users, for best performance and ease of use.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+In addition to those, PCSX2-EX also includes:
+- A base EE Address of 0x20000000 on x86 builds, ensuring Cheat Engine and EmuHaste compatibility.
+- The lack of an IPC API.
+- An extended version of PNACH called ExPATCH which includes pointer operations and timer-based execution.
+- A Lua interpreter made specifically for PCSX2-EX called the LuaEngine, based on sol2 to allow advanced modifications.
+- Various performance fixes and quality of life improvements.
 
-```markdown
-Syntax highlighted code block
+## Why isn't this a part of the master build of PCSX2?
 
-# Header 1
-## Header 2
-### Header 3
+TL;DR - Drama and incompetence.
 
-- Bulleted
-- List
+## Where can I learn about LuaEngine and ExPATCH?
+Documentation is being written and revised. Coming soon!
 
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/Topaz-Reality/PCSX2-EX/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+## Where can I get PCSX2-EX?
+The latest release build is at the top of this page.
