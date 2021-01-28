@@ -22,9 +22,9 @@ TL;DR - Drama and incompetence.
 
 ## Where can I learn about LuaEngine and ExPATCH?
 
-Documentation is available and it is actively being updated.
-[Click Here](https://topaz-reality.github.io/PCSX2-EX/lua) for LuaEngine Documentation.
-[Click Here](https://topaz-reality.github.io/PCSX2-EX/expatch) for ExPATCH Documentation.
+Documentation is available and it is actively being updated. <br/>
+[Click Here](https://topaz-reality.github.io/PCSX2-EX/lua) for LuaEngine Documentation. <br/>
+[Click Here](https://topaz-reality.github.io/PCSX2-EX/expatch) for ExPATCH Documentation. <br/>
 <br/><br/>
 
 ## How can I contribute?
