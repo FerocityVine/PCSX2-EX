@@ -1,10 +1,13 @@
 #include "PrecompiledHeader.h"
-#include "LuaPS2.h"
 
-int LuaPS2::_version;
+#include "LuaPS2.h"
+#include "AppConfig.h"
+
 u32 LuaPS2::_checksum;
 wxString LuaPS2::_loadPath;
 wxString LuaPS2::_savePath;
+
+bool LuaPS2::_isSaving = false;
 
 LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 {
@@ -24,11 +27,19 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 
 	SetFunctions();
 
+	_loadPath = Path::Combine(Path::GetDirectory(Input01), "io_load");
+
 	luaState["package"]["path"] = Path::Combine(Path::GetDirectory(Input01), "io_packages/").ToStdString() + "?.lua";
 	luaState["package"]["cpath"] = Path::Combine(Path::GetDirectory(Input01), "io_packages/").ToStdString() + "?.dll";
 
-	_version = 0x0600;
-	luaState.do_file(Input01.ToStdString());
+	luaState["LOAD_PATH"] = _loadPath.ToStdString();
+	luaState["SCRIPT_PATH"] = Path::GetDirectory(Input01).ToStdString();
+	luaState["CHEATS_PATH"] = GetCheatsFolder().ToString().ToStdString();
+
+	luaState["ENGINE_VERSION"] = 2.0F;
+	luaState["GAME_ID"] = Input02;
+
+	auto _result = luaState.script_file(Input01.ToStdString());
 
 	initFunction = luaState["_OnInit"];
 	frameFunction = luaState["_OnFrame"];
@@ -46,13 +57,11 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 		return;
 	}
 
-	_loadPath = Path::Combine(Path::GetDirectory(Input01), "io_load");
-	_savePath = Path::Combine(Path::GetDirectory(Input01), "io_save");
-
-	_checksum = Input02;
-
 	Console.WriteLn(Color_Green, L"LuaEngine: Initialization Successful!");
 	Console.WriteLn(Color_Black, L"");
+
+	if (initFunction)
+		initFunction();
 }
 
 
@@ -72,7 +81,6 @@ void LuaPS2::SetFunctions()
 	luaState.set_function("GetPointer", Calculate_Pointer);
 
 	// IO Operations
-	luaState.set_function("MakeDump", File_DumpRAM);
 	luaState.set_function("ReadFile", sol::overload(File_Read, File_ReadRegion));
 
 	// Writers
@@ -87,7 +95,5 @@ void LuaPS2::SetFunctions()
 
 	// Misc
 	luaState.set_function("ConsolePrint", PCSX2Print);
-	luaState.set_function("LuaVersion", FetchVersion);
-	luaState.set_function("GameChecksum", FetchChecksum);
 }
 

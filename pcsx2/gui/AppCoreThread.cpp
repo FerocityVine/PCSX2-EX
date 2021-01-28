@@ -445,21 +445,23 @@ static void _ApplySettings( const Pcsx2Config& src, Pcsx2Config& fixup )
 		gameCRC = L"00000000";
 	}
 
-	// regular cheat patches
-	if (fixup.EnableCheats)
-		gameCheats.Printf(L" [%d Patches]", LoadPatchesFromDir(gameCRC, GetCheatsFolder(), L"Patches"));
-
-	if (fixup.EnableLua)
+	if (gameCRC != L"00000000")
 	{
-		int _load = LoadScriptFromDir(gameCRC, GetLuaFolder(), L"Scripts");
+		// regular cheat patches
+		if (fixup.EnableCheats)
+			gameCheats.Printf(L" [%d Patches]", LoadPatchesFromDir(gameCRC, GetCheatsFolder(), L"Patches"));
 
-		if (_load > 0)
-			gameScript.Printf(L" [%d Scripts]", _load);
+		if (fixup.EnableLua)
+		{
+			int _load = LoadScriptFromDir(gameCRC, GetLuaFolder(), L"Scripts");
 
-		else if (_load == -1)
-			gameScript.Printf(L" [Lua: ERROR]", _load);
+			if (_load > 0)
+				gameScript.Printf(L" [%d Scripts]", _load);
+
+			else if (_load == -1)
+				gameScript.Printf(L" [Lua: ERROR]", _load);
+		}
 	}
-
 	
 	// wide screen patches
 	if (fixup.EnableWideScreenPatches)

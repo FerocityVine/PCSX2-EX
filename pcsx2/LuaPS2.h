@@ -1,18 +1,8 @@
-#include "PrecompiledHeader.h"
-#include "Memory.h"
-#include "LuaEngine.h"
-
-#include <iostream>
-#include <fstream>
-
-#include <memory>
-#include <vector>
-#include <wx/textfile.h>
-#include <wx/dir.h>
-#include <wx/txtstrm.h>
-#include <wx/zipstrm.h>
+#ifndef LUA_PS2
+#define LUA_PS2
 
 #include "sol.hpp"
+#include "LuaEngine.h"
 
 using namespace sol;
 using namespace std;
@@ -22,10 +12,11 @@ using LuaFunction = sol::function;
 
 class LuaPS2
 {
-	static int _version;
 	static u32 _checksum;
 	static wxString _loadPath;
 	static wxString _savePath;
+
+	static bool _isSaving;
 
 public:
 	LuaState luaState;
@@ -89,13 +80,13 @@ public:
 
 	#pragma region Writer Functions
 	static void Write_UInt08(u32 Input01, u8 Input02) {
-		u8 _value = static_cast<u8>(Input02);
+		const u8 _value = static_cast<u8>(Input02);
 
 		if (memRead8(Input01) != _value)
 			memWrite8(Input01, _value);
 	}
 	static void Write_UInt16(u32 Input01, u16 Input02) {
-		u16 _value = static_cast<u16>(Input02);
+		const u16 _value = static_cast<u16>(Input02);
 
 		if (memRead16(Input01) != _value)
 			memWrite16(Input01, _value);
@@ -120,7 +111,7 @@ public:
 	static void Write_Single(u32 Input01, float Input02)
 	{
 		float _inp = Input02;
-		u32 _val = *reinterpret_cast<u32*>(&_inp);
+		const u32 _val = *reinterpret_cast<u32*>(&_inp);
 
 		if (memRead32(Input01) != _val)
 			memWrite32(Input01, _val);
@@ -131,7 +122,7 @@ public:
 
 		for (size_t i = 0; i < _array.size(); i++)
 		{
-			u8 _value = static_cast<u8>(_array[i]);
+			const u8 _value = static_cast<u8>(_array[i]);
 
 			memWrite8(Input01, _value);
 			Input01++;
@@ -141,7 +132,7 @@ public:
 	{
 		for (size_t i = 0; i < Input02.size(); i++)
 		{
-			u8 _value = static_cast<u8>(Input02[i]);
+			const u8 _value = static_cast<u8>(Input02[i]);
 
 			memWrite8(Input01, _value);
 			Input01++;
@@ -158,26 +149,6 @@ public:
 	#pragma endregion
 	
 	#pragma region File I/O Functions
-	static void File_DumpRAM(u32 Input01, u32 Input02, const char* Input03) {
-		std::vector<u8> _value(Input02);
-		wxString _location = Path::Combine(_savePath, Input03);
-
-		for (size_t i = 0; i < Input02; i++)
-		{
-			_value.at(i) = memRead8(Input01);
-			Input01++;
-		}
-
-		ofstream _output(_location.ToStdString(), ios::out | ios::binary);
-
-		if (!_output)
-		{
-			Console.WriteLn(Color_Red, "LuaEngine: Unable to open file: " + wxString(Input03));
-			return;
-		}
-
-		_output.write(reinterpret_cast<char*>(&_value[0]), _value.size() * sizeof(u8));
-	}
 	static vector<u8> File_Read(const char* Input02) {
 		wxString _location = Path::Combine(_loadPath, Input02);
 
@@ -211,17 +182,13 @@ public:
 
 	#pragma region Misc. Functions
 	static void PCSX2Print(const char* Input, int Color = 1) {
-		ConsoleColors _color = static_cast<ConsoleColors>(Color);
+		const ConsoleColors _color = static_cast<ConsoleColors>(Color);
 		Console.WriteLn(_color, Input);
-	}
-	static int FetchVersion() {
-		return _version;
-	}
-	static u32 FetchChecksum() {
-		return _checksum;
 	}
 	#pragma endregion
 
 	void SetFunctions();
 	LuaPS2(wxString Input01, u32 Input02);
 };
+
+#endif

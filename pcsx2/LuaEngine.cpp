@@ -1,20 +1,5 @@
 #include "PrecompiledHeader.h"
-#include "Memory.h"
-
-#include <iostream>
-#include <fstream>
-
-#include <memory>
-#include <vector>
-#include <wx/textfile.h>
-#include <wx/dir.h>
-#include <wx/txtstrm.h>
-#include <wx/zipstrm.h>
-
-#include "sol.hpp"
-
 #include "LuaPS2.h"
-#include "LuaEngine.h"
 
 using namespace sol;
 using namespace std;
@@ -35,7 +20,7 @@ void ForgetScripts()
 int LoadScriptFromDir(wxString name, const wxDirName& folderName, const wxString& friendlyName)
 {
 	Console.WriteLn(Color_Black, L"");
-	Console.WriteLn(Color_StrongBlue, L"Initializing LuaEngine v1.75");
+	Console.WriteLn(Color_StrongBlue, L"Initializing LuaEngine v2.0");
 	Console.WriteLn(Color_Black, L"");
 
 	u32 _checksum;
@@ -93,7 +78,7 @@ int LoadScriptFromDir(wxString name, const wxDirName& folderName, const wxString
 	}
 
 	if (_loaded == 0)
-		Console.WriteLn(Color_Orange, L"LuaEngine: No Lua Scripts were found for this game.", WX_STR(_buffer));
+		Console.WriteLn(Color_Orange, L"LuaEngine: No Lua scripts were found for this game.", WX_STR(_buffer));
 
 	return _loaded;
 }

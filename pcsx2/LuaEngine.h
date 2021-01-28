@@ -3,6 +3,19 @@
 
 #include "Pcsx2Types.h"
 
+#include "Memory.h"
+#include "AppSaveStates.h"
+
+#include <iostream>
+#include <fstream>
+
+#include <memory>
+#include <vector>
+#include <wx/textfile.h>
+#include <wx/dir.h>
+#include <wx/txtstrm.h>
+#include <wx/zipstrm.h>
+
 enum LUAExecutionTime
 {
 	SPT_ONCE_ON_LOAD = 0,

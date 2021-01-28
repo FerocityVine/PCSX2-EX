@@ -637,7 +637,7 @@ protected:
 
 void StateCopy_SaveToFile( const wxString& file )
 {
-	UI_DisableStateActions();
+	// UI_DisableStateActions();
 
 	std::unique_ptr<ArchiveEntryList> ziplist(new ArchiveEntryList(new VmStateBuffer(L"Zippable Savestate")));
 

@@ -250,7 +250,7 @@ int LoadPatchesFromZip(wxString gameCRC, const wxString& patchesArchiveFilename)
 int LoadPatchesFromDir(wxString name, const wxDirName& folderName, const wxString& friendlyName)
 {
 	PatchesCon->WriteLn(Color_Black, L"");
-	PatchesCon->WriteLn(Color_StrongBlue, L"Initializing ExPATCH System v0.5");
+	PatchesCon->WriteLn(Color_StrongBlue, L"Initializing ExPATCH System v1.0");
 	PatchesCon->WriteLn(Color_Black, L"");
 
 	int loaded = 0;
