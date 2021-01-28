@@ -1,7 +1,7 @@
 ## What is PCSX2-EX?
 
 Simply put: PCSX2-EX is an extended version of PCSX2, with improvements to it's performance and modification abilities.
-\ 
+## \newline
 
 ## What is the diference between PCSX2 and PCSX2-EX?
 
@@ -13,22 +13,22 @@ In addition to those, PCSX2-EX also includes:
 - An extended version of PNACH called ExPATCH which includes pointer operations and timer-based execution.
 - A Lua interpreter made specifically for PCSX2-EX called the LuaEngine, based on sol2 to allow advanced modifications.
 - Various performance fixes and quality of life improvements.
-\ 
+## \newline
 
 ## Why isn't this a part of the master build of PCSX2?
 
 TL;DR - Drama and incompetence.
-\ 
+## \newline
 
 ## Where can I learn about LuaEngine and ExPATCH?
 
 Documentation is being written and revised. Coming soon!
-\ 
+## \newline
 
 ## How can I contribute?
 
 Well, great question! If you want to add a feature or fix something, fork my rpoject and PR it to me! 9 times out of 10, it will be approved!
-\ 
+## \newline
 
 ## Where can I get PCSX2-EX?
 
