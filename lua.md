@@ -1,3 +1,5 @@
+# LuaEngine Documentation v2.0
+
 ## What is LuaEngine?
 
 LuaEngine is a version of Lua running within PCSX2-EX, powered by sol2. It allows for the use of Lua scripts as a method of modifying any game in question.
@@ -36,6 +38,15 @@ Because... they kind of are! Below you can find the cheatsheet to all PCSX2-EX s
 The libraries you would need to use must be 5.4 compliant. In addition, if the libraries need to be compiled, they must be compiled
 for x86 and with Lua 5.4, and on the platform that you are on, with the copiler that compiled PCSX2-EX
 (All release versions of PCSX2-EX are compiled with MSVC2019 for Windows x86)
+
+Put the libraries on the "**io_packages**" folder in the "**lua**" folder. To reference them, you can then use the ``require`` command.
+Exampe being, if I want to use ``socket.http`` from LuaSocket, which I put in ``lua/io_packages/LuaSocket/``, I would need to do:
+
+```lua
+local http = require("LuaSocket/socket.http")
+```
+
+That's it!
 
 ## Important Notes to using LuaEngine
 
@@ -138,4 +149,4 @@ Example:
     ConsolePrint("Howdy partner?", 0x05) -- Prints to the PCSX2-EX Console: "Howdy partner?" in Magenta.
 ```
 
-#### * Any functions present in this document signify v2.25.0 compatibility. Any function absent in this document is no longer supported and should be considered obsolete.
+#### * Any functions present in this document signify compatibility with the latest version. Any function absent in this document is no longer supported and should be considered obsolete.
