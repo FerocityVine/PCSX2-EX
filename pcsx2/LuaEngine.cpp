@@ -85,7 +85,7 @@ int LoadScriptFromDir(wxString name, const wxDirName& folderName, const wxString
 
 void ExecuteScript(LUAExecutionTime Input01)
 {
-	for each (auto _script in _loadedScripts)
+	for (auto _script : _loadedScripts)
 	{
 		if (!_script->initFunction && !_script->frameFunction)
 			return;

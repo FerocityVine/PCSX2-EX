@@ -49,6 +49,9 @@ set(Output PCSX2)
 
 # Main pcsx2 source
 set(pcsx2Sources
+	sol.hpp
+	forward.hpp
+	config.hpp
 	Cache.cpp
 	COP0.cpp
 	COP2.cpp
