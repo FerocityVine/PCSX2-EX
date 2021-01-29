@@ -493,9 +493,6 @@ set(pcsx2SystemSources
 
 # System headers
 set(pcsx2SystemHeaders
-	System/sol.hpp
-	System/forward.hpp
-	System/config.hpp
 	System/RecTypes.h
 	System/SysThreads.h)
 
