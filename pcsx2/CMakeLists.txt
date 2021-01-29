@@ -49,6 +49,9 @@ set(Output PCSX2)
 
 # Main pcsx2 source
 set(pcsx2Sources
+	sol.hpp
+	forward.hpp
+	config.hpp
 	Cache.cpp
 	COP0.cpp
 	COP2.cpp
@@ -493,9 +496,6 @@ set(pcsx2SystemSources
 
 # System headers
 set(pcsx2SystemHeaders
-	System/sol.hpp
-	System/forward.hpp
-	System/config.hpp
 	System/RecTypes.h
 	System/SysThreads.h)
 
