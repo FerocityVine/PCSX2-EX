@@ -93,7 +93,7 @@ void ExecuteScript(LUAExecutionTime Input01)
 		switch (Input01)
 		{
 			case SPT_ONCE_ON_LOAD:
-				_script->initFunction();
+				_script->bootFunction();
 				break;
 			case SPT_CONTINOUSLY:
 				_script->frameFunction();

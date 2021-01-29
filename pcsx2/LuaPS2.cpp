@@ -41,8 +41,12 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 
 	auto _result = luaState.script_file(Input01.ToStdString());
 
+	bootFunction = luaState["_OnBoot"];
 	initFunction = luaState["_OnInit"];
 	frameFunction = luaState["_OnFrame"];
+
+	if (!bootFunction)
+		Console.WriteLn(Color_Red, L"LuaEngine: The \"_OnBoot\" function either has errors or does not exist.");
 
 	if (!initFunction)
 		Console.WriteLn(Color_Red, L"LuaEngine: The \"_OnInit\" function either has errors or does not exist.");
@@ -50,9 +54,9 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 	if (!frameFunction)
 		Console.WriteLn(Color_Red, L"LuaEngine: The \"_OnFrame\" function either has errors or does not exist.");
 
-	if (!initFunction && !frameFunction)
+	if (!initFunction && !frameFunction && !bootFunction)
 	{
-		Console.WriteLn(Color_Red, L"\nLuaEngine: Both the \"_OnInit\" and \"_OnFrame\" functions either have errors or do not exist!");
+		Console.WriteLn(Color_Red, L"\nLuaEngine: None of the needed functions exist or all of them have errors.");
 		Console.WriteLn(Color_Red, L"LuaEngine: Initialization of this script cannot continue...\n");
 		return;
 	}

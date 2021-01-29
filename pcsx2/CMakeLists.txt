@@ -84,6 +84,8 @@ set(pcsx2Sources
 	OutputIsoFile.cpp
 	Patch.cpp
 	Patch_Memory.cpp
+	LuaEngine.cpp
+	LuaPS2.cpp
 	Pcsx2Config.cpp
 	PluginManager.cpp
 	PrecompiledHeader.cpp
@@ -152,6 +154,8 @@ set(pcsx2Headers
 	Memory.h
 	MemoryTypes.h
 	Patch.h
+	LuaEngine.h
+	LuaPS2.h
 	PathDefs.h
 	Plugins.h
 	PrecompiledHeader.h

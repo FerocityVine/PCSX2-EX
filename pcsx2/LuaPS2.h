@@ -20,6 +20,7 @@ class LuaPS2
 
 public:
 	LuaState luaState;
+	LuaFunction bootFunction;
 	LuaFunction initFunction;
 	LuaFunction frameFunction;
 
