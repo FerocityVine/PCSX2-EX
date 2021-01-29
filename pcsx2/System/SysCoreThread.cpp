@@ -22,7 +22,7 @@
 #include "GS.h"
 #include "Elfheader.h"
 #include "Patch.h"
-#include "LUAEngine.h"
+#include "LuaEngine.h"
 #include "SysThreads.h"
 #include "MTVU.h"
 

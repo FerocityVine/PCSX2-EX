@@ -30,7 +30,7 @@
 #include "CDVD/CDVD.h"
 #include "Elfheader.h"
 #include "Patch.h"
-#include "LUAEngine.h"
+#include "LuaEngine.h"
 #include "R5900Exceptions.h"
 #include "Sio.h"
 
