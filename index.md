@@ -35,4 +35,4 @@ Well, great question! If you want to add a feature or fix something, fork my pro
 
 ## Where can I get PCSX2-EX?
 
-The latest release [v2.25.1] can be found [here](https://github.com/Topaz-Reality/PCSX2-EX/releases/tag/v2.25.1).
+The latest release [v2.25.5] can be found [here](https://github.com/Topaz-Reality/PCSX2-EX/releases/tag/v2.25.5).
