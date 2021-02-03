@@ -87,16 +87,18 @@ void ExecuteScript(LUAExecutionTime Input01)
 {
 	for (auto _script : _loadedScripts)
 	{
-		if (!_script->initFunction && !_script->frameFunction)
+		if (!_script->bootFunction && !_script->frameFunction)
 			return;
 
 		switch (Input01)
 		{
 			case SPT_ONCE_ON_LOAD:
-				_script->bootFunction();
+				if (_script->bootFunction)
+					_script->bootFunction();
 				break;
 			case SPT_CONTINOUSLY:
-				_script->frameFunction();
+				if (_script->frameFunction)
+					_script->frameFunction();
 				break;
 		}
 	}

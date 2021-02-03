@@ -547,7 +547,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	wxSize backsize(m_background->GetBitmap().GetWidth(), m_background->GetBitmap().GetHeight());
 
 	wxString wintitle;
-	wintitle.Printf(L"PCSX2-EX v2.25.1 [Base v1.7.0]");
+	wintitle.Printf(L"PCSX2-EX v2.25.5 [Base v1.7.0]");
 
 
 	SetTitle( wintitle );
