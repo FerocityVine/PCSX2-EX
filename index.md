@@ -15,11 +15,6 @@ In addition to those, PCSX2-EX also includes:
 - Various performance fixes and quality of life improvements.
 <br/><br/>
 
-## Why isn't this a part of the master build of PCSX2?
-
-TL;DR - Drama and incompetence.
-<br/><br/>
-
 ## Where can I learn about LuaEngine and ExPATCH?
 
 Documentation is available and it is actively being updated.
