@@ -74,7 +74,8 @@ That's it!
 - ``GAME_ID`` => Returns the current game's CRC32 checksum as an integer. Ex: ``0xF266B00B``
 - ``SCRIPT_PATH`` => Returns the path which Lua scripts are loaded from as a string. Ex: ``"C:\Users\Topaz\Documents\PCSX2\lua"``
 - ``CHEATS_PATH`` => Returns the path which ExPATCH files are loaded from as a string. Ex: ``"C:\Users\Topaz\Documents\PCSX2\cheats"``
-- ``ENGINE_VERSION`` => Returns the LuaEngine's version as a float. Ex: ``2.0``
+- ``ENGINE_VERSION`` => Returns the LuaEngine's version as a float. Ex: ``2.5``
+- ``ENGINE_TYPE`` => Always returns ``ENGINE``.
 
 
 ###  ReadXXXX(Address)
