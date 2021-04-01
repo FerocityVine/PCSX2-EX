@@ -64,7 +64,7 @@ public:
 			Input01++;
 		}
 
-		return string(_value.begin(), _value.end());
+		return (char*)_value.data();
 	}
 	static vector<u8> Read_UInt08_Array(u32 Input01, u32 Input02) {
 		std::vector<u8> _value(Input02);
