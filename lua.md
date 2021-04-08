@@ -1,4 +1,4 @@
-# LuaEngine Documentation v2.5
+# LuaEngine Documentation v2.80
 
 ---
 
@@ -74,13 +74,13 @@ That's it!
 - ``GAME_ID`` => Returns the current game's CRC32 checksum as an integer. Ex: ``0xF266B00B``
 - ``SCRIPT_PATH`` => Returns the path which Lua scripts are loaded from as a string. Ex: ``"C:\Users\Topaz\Documents\PCSX2\lua"``
 - ``CHEATS_PATH`` => Returns the path which ExPATCH files are loaded from as a string. Ex: ``"C:\Users\Topaz\Documents\PCSX2\cheats"``
-- ``ENGINE_VERSION`` => Returns the LuaEngine's version as a float. Ex: ``2.5``
+- ``ENGINE_VERSION`` => Returns the LuaEngine's version as a float. Ex: ``2.8``
 - ``ENGINE_TYPE`` => Always returns ``ENGINE``.
 
 
-###  ReadXXXX(Address)
+###  ReadXXXX(Address) / ReadString(Address, Length)
 
-Reads a certain value from **Address**. Returns the read value. 
+Reads a certain value from absolute **Address**. Returns the read value. If reading a String, length must also be declared.
 The "**XXXX**" is a placeholder for the value type.
 List of types available: Byte, Short, Int, Long, Float, String, Boolean
 
@@ -144,18 +144,6 @@ Calculates a pointer with the given values. Basically, reads the value at **Addr
 Example:
 ```lua
     local _tempPointer = GetPointer(0xBEEFDAD, 0x15) -- Reads the value at 0xBEEFDAD and adds 0x15 to it.
-```
-
-### ConsolePrint(Message, Color = 1)
-
-Prints unto the PCSX2-EX console. The color is normally 1.
-
-The available colors are, starting from 1:
-Black, Green, Red, Blue, Magenta, Orange, Gray, Cyan, Yellow, White, StrongBlack, StrongGreen, StrongRed, StrongBlue, StrongMagenta, StrongOrange, StrongGray, StrongCyan, StrongYellow, StrongWhite
-
-Example:
-```lua
-    ConsolePrint("Howdy partner?", 0x05) -- Prints to the PCSX2-EX Console: "Howdy partner?" in Magenta.
 ```
 
 #### * Any functions present in this document signify compatibility with the latest version. Any function absent in this document is no longer supported and should be considered obsolete.
