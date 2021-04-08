@@ -20,7 +20,7 @@ void ForgetScripts()
 int LoadScriptFromDir(wxString name, const wxDirName& folderName, const wxString& friendlyName)
 {
 	Console.WriteLn(Color_Black, L"");
-	Console.WriteLn(Color_StrongBlue, L"Initializing LuaEngine v2.5");
+	Console.WriteLn(Color_StrongBlue, L"Initializing LuaEngine v2.8");
 	Console.WriteLn(Color_Black, L"");
 
 	u32 _checksum;

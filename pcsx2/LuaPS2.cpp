@@ -36,7 +36,7 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 	luaState["SCRIPT_PATH"] = Path::GetDirectory(Input01).ToStdString();
 	luaState["CHEATS_PATH"] = GetCheatsFolder().ToString().ToStdString();
 
-	luaState["ENGINE_VERSION"] = 2.5F;
+	luaState["ENGINE_VERSION"] = 2.8F;
 	luaState["ENGINE_TYPE"] = "ENGINE";
 	luaState["GAME_ID"] = Input02;
 
@@ -97,8 +97,5 @@ void LuaPS2::SetFunctions()
 	luaState.set_function("WriteFloat",   Write_Single);
 	luaState.set_function("WriteString",  Write_String);
 	luaState.set_function("WriteArray",   Write_UInt08_Array);
-
-	// Misc
-	luaState.set_function("ConsolePrint", PCSX2Print);
 }
 

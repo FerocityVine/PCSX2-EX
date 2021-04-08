@@ -64,7 +64,7 @@ public:
 			Input01++;
 		}
 
-		return (char*)_value.data();
+		return string(_value.begin(), _value.end());
 	}
 	static vector<u8> Read_UInt08_Array(u32 Input01, u32 Input02) {
 		std::vector<u8> _value(Input02);
@@ -178,13 +178,6 @@ public:
 		copy(istreambuf_iterator<char>(_input), istreambuf_iterator<char>(), back_inserter(_buffer));
 
 		return _buffer;
-	}
-	#pragma endregion
-
-	#pragma region Misc. Functions
-	static void PCSX2Print(const char* Input, int Color = 1) {
-		const ConsoleColors _color = static_cast<ConsoleColors>(Color);
-		Console.WriteLn(_color, Input);
 	}
 	#pragma endregion
 
