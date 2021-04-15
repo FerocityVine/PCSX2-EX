@@ -307,7 +307,6 @@ void handle_extended_t(IniPatch* _input)
         } break;
 
         case 0x80000000:
-            //_cheatAddress = memRead32(static_cast<u32>((_input->addr & 0x0FFFFFFF) + _input->data));
             _cheatAddress = memRead32(static_cast<u32>(_input->addr & 0x0FFFFFFF)) + _input->data;
             _cheatType = 0x80;
             break;
