@@ -234,16 +234,16 @@ void handle_extended_t(IniPatch* _input)
 
             switch (_input->addr & 0x00F00000) {
             case 0x000000:
-                memWrite8(_input->data, _value8 + (_input->addr & 0x000000FF));
+                memWrite8(_input->data & 0x0FFFFFFF, _value8 + (_input->addr & 0x000000FF));
                 break;
             case 0x100000:
-                memWrite8(_input->data, _value8 - (_input->addr & 0x000000FF));
+                memWrite8(_input->data & 0x0FFFFFFF, _value8 - (_input->addr & 0x000000FF));
                 break;
             case 0x200000:
-                memWrite16(_input->data, _value16 + (_input->addr & 0x0000FFFF));
+                memWrite16(_input->data & 0x0FFFFFFF, _value16 + (_input->addr & 0x0000FFFF));
                 break;
             case 0x300000:
-                memWrite16(_input->data, _value16 - (_input->addr & 0x0000FFFF));
+                memWrite16(_input->data & 0x0FFFFFFF, _value16 - (_input->addr & 0x0000FFFF));
                 break;
             case 0x400000:
                 _cheatType = 0x30;
@@ -307,7 +307,7 @@ void handle_extended_t(IniPatch* _input)
         } break;
 
         case 0x80000000:
-            _cheatAddress = memRead32(static_cast<u32>((_input->addr & 0x0FFFFFFF) + _input->data));
+            _cheatAddress = memRead32(static_cast<u32>(_input->addr & 0x0FFFFFFF)) + _input->data;
             _cheatType = 0x80;
             break;
 
