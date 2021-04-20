@@ -1,0 +1,87 @@
+# Project Name
+project(Pcsx2)
+
+# Debian-based distributions require at least 2.8.5 due to multiarch.
+# Bumping up to 3.0 seems reasonable at this point, and will let us modernize
+# things a bit.
+cmake_minimum_required(VERSION 3.0.2)
+
+# Variable to check that people use the good file
+set(TOP_CMAKE_WAS_SOURCED TRUE)
+
+# set module path
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+# include some generic functions to ensure correctness of the env
+include(Pcsx2Utils)
+
+check_no_parenthesis_in_path()
+detectOperatingSystem()
+check_compiler_version("4.8" "4.8")
+
+#-------------------------------------------------------------------------------
+# Include specific module
+# BuildParameters Must be done before SearchForStuff
+include(BuildParameters)
+# SearchForStuff be done before SelectPcsx2Plugins
+include(SearchForStuff)
+include(SelectPcsx2Plugins)
+
+# Must be done after SearchForStuff
+write_svnrev_h()
+
+if(NOT NO_TRANSLATION)
+# make the translation
+if(EXISTS "${CMAKE_SOURCE_DIR}/locales")
+    add_subdirectory(locales)
+endif()
+endif()
+
+# make common
+if(common_libs)
+    add_subdirectory(common/src/Utilities)
+    add_subdirectory(common/src/x86emitter)
+endif()
+
+# make pcsx2
+if(EXISTS "${CMAKE_SOURCE_DIR}/pcsx2" AND pcsx2_core)
+    add_subdirectory(pcsx2)
+endif()
+
+# make plugins
+if(EXISTS "${CMAKE_SOURCE_DIR}/plugins")
+    add_subdirectory(plugins)
+endif()
+
+#-------------------------------------------------------------------------------
+
+# Install some files to ease package creation
+if(PACKAGE_MODE)
+    if(NOT DISABLE_CHEATS_ZIP)
+        INSTALL(FILES     "${CMAKE_SOURCE_DIR}/bin/cheats_ws.zip" DESTINATION "${GAMEINDEX_DIR}")
+    endif()
+    INSTALL(FILES     "${CMAKE_SOURCE_DIR}/bin/GameIndex.dbf" DESTINATION "${GAMEINDEX_DIR}")
+
+    # set categories depending on system/distribution in pcsx2.desktop
+    if(openSUSE)
+        set(PCSX2_MENU_CATEGORIES "System;Emulator;")
+    else()
+        set(PCSX2_MENU_CATEGORIES "Game;Emulator;")
+    endif()
+    configure_file("${CMAKE_SOURCE_DIR}/linux_various/PCSX2.desktop.in" "${CMAKE_BINARY_DIR}/linux_various/PCSX2.desktop" @ONLY)
+
+    INSTALL(FILES "${CMAKE_BINARY_DIR}/linux_various/PCSX2.desktop" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications")
+    INSTALL(FILES "${CMAKE_SOURCE_DIR}/linux_various/PCSX2.xpm"     DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps")
+    INSTALL(FILES "${CMAKE_SOURCE_DIR}/bin/docs/PCSX2_FAQ.pdf"      DESTINATION "${DOC_DIR}")
+    INSTALL(FILES "${CMAKE_SOURCE_DIR}/bin/docs/Configuration_Guide.pdf"   DESTINATION "${DOC_DIR}")
+    INSTALL(FILES "${CMAKE_SOURCE_DIR}/bin/docs/PCSX2.1"            DESTINATION "${MAN_DIR}/man1")
+    if(NOT DISABLE_PCSX2_WRAPPER)
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/linux_various/PCSX2-linux.sh"          DESTINATION "${BIN_DIR}")
+    endif()
+
+else()
+    if(NOT DISABLE_PCSX2_WRAPPER)
+        # special case to avoid having linux files in windows
+        INSTALL(FILES "${CMAKE_SOURCE_DIR}/linux_various/PCSX2-linux.sh"          DESTINATION "${CMAKE_SOURCE_DIR}/bin")
+    endif()
+endif()
