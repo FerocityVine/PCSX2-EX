@@ -24,6 +24,7 @@
 #include "Patch.h"
 #include "SysThreads.h"
 #include "MTVU.h"
+#include "LuaEngine/LuaEngine.h"
 
 #include "../DebugTools/MIPSAnalyst.h"
 #include "../DebugTools/SymbolMap.h"
@@ -224,6 +225,7 @@ void SysCoreThread::DoCpuReset()
 //
 void SysCoreThread::VsyncInThread()
 {
+    ExecuteScript(SPT_CONTINOUSLY);
 	ApplyLoadedPatches(PPT_CONTINUOUSLY);
 }
 
@@ -235,6 +237,7 @@ void SysCoreThread::GameStartingInThread()
 	symbolMap.UpdateActiveSymbols();
 	sApp.PostAppMethod(&Pcsx2App::resetDebugger);
 
+	ExecuteScript(SPT_ONCE_ON_LOAD);
 	ApplyLoadedPatches(PPT_ONCE_ON_LOAD);
 #ifdef USE_SAVESLOT_UI_UPDATES
 	UI_UpdateSysControls();
