@@ -569,6 +569,8 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 #define VK_F5 XK_F5
 #define VK_F6 XK_F6
 #define VK_F7 XK_F7
+#define VK_F10 XK_F10
+#define VK_F11 XK_F11
 #define VK_DELETE XK_Delete
 #define VK_INSERT XK_Insert
 #define VK_PRIOR XK_Prior
@@ -591,6 +593,21 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			theApp.SetConfig("TVShader", m_shader);
 			printf("GSdx: Set shader to: %d.\n", m_shader);
 			return;
+        case VK_F10:
+            m_texture_funcs = !m_texture_funcs;
+            theApp.SetConfig("paltex", 0);
+            theApp.SetConfig("texture_func", m_texture_funcs);
+            printf("GSdx: Texture functionality is now %s.\n", m_texture_funcs ? "enabled" : "disabled");
+            return;
+        case VK_F11:
+            if (m_texture_funcs) {
+                m_texture_replace = !m_texture_replace;
+                m_texture_extract = !m_texture_extract;
+                theApp.SetConfig("texture_replace", m_texture_replace);
+                theApp.SetConfig("texture_extract", m_texture_extract);
+                printf("GSdx: Texture functionality mode set to: %s\n", m_texture_extract ? "Dump Mode" : "Replace Mode");
+            }
+            return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;
 			theApp.SetConfig("aa1", m_aa1);

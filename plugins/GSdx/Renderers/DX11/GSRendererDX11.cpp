@@ -611,7 +611,7 @@ void GSRendererDX11::EmulateBlending()
 	}
 }
 
-void GSRendererDX11::EmulateTextureSampler(const GSTextureCache::Source* tex)
+void GSRendererDX11::EmulateTextureSampler(const GSTextureCache::Source *tex, GSTexture *inp)
 {
 	// Warning fetch the texture PSM format rather than the context format. The latter could have been corrected in the texture cache for depth.
 	//const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[m_context->TEX0.PSM];
@@ -634,6 +634,11 @@ void GSRendererDX11::EmulateTextureSampler(const GSTextureCache::Source* tex)
 
 	int tw = (int)(1 << m_context->TEX0.TW);
 	int th = (int)(1 << m_context->TEX0.TH);
+
+	if (inp) {
+        w = inp->GetWidth();
+        h = inp->GetHeight();
+    }
 
 	GSVector4 WH(tw, th, w, h);
 
@@ -810,7 +815,7 @@ void GSRendererDX11::ResetStates()
 	m_om_dssel.key = 0;
 }
 
-void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererDX11::DrawPrims(GSTexture *rt, GSTexture *ds, GSTextureCache::Source *tex, GSTexture *inp)
 {
 	GSTexture* hdr_rt = NULL;
 
@@ -1053,11 +1058,15 @@ void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sou
 			m_om_dssel.date_one = 1;
 	}
 	// END OF FIXME
-
-	if (tex)
+    if (tex) 
 	{
-		EmulateTextureSampler(tex);
-	}
+        if (inp)
+            EmulateTextureSampler(tex, inp);
+
+        else
+            EmulateTextureSampler(tex);
+    }
+
 	else
 	{
 		m_ps_sel.tfx = 4;
@@ -1114,7 +1123,12 @@ void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sou
 	else
 		dev->OMSetRenderTargets(rt, ds, &scissor);
 
-	dev->PSSetShaderResource(0, tex ? tex->m_texture : NULL);
+    if (inp != nullptr)
+        dev->PSSetShaderResource(0, inp);
+
+    else 
+        dev->PSSetShaderResource(0, tex ? tex->m_texture : NULL);
+
 	dev->PSSetShaderResource(1, tex ? tex->m_palette : NULL);
 
 	SetupIA(sx, sy);

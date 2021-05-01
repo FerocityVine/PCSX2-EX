@@ -1,0 +1,36 @@
+# Game: Kingdom Hearts - Re: Chain of Memories
+# Created by: TopazTK
+# Version: v0.47
+
+ProcessTEX: 
+  # ./field2d/
+  0x0CF2C584: "@COM/field2d/zz0field.dds"
+  0x1971E6D5: "@COM/field2d/zz1field.dds"
+  0xD4390426: "@COM/field2d/zz0card.dds"
+  0xAABEB849: "@COM/field2d/zz1card.dds"
+
+  # ./menu/
+  0xC128CAD7: "@COM/menu/pause.dds"
+
+  # ./msg/
+  0x3FB3C61A: "@COM/msg/sysfont.dds"
+
+  # ./itempic/
+  0x1B9DA522: "@COM/itempic/pict01.dds"
+  0x18D339EE: "@COM/itempic/pict02.dds"
+  0x17FBCA8B: "@COM/itempic/pict03.dds"
+  0x617AE14C: "@COM/itempic/pict04.dds"
+  0xCED2D2F5: "@COM/itempic/pict05.dds"
+  0x5F4D34DF: "@COM/itempic/pict06.dds"
+  0xB09B4CB3: "@COM/itempic/pict08.dds"
+  0x8CF40ECB: "@COM/itempic/pict10.dds"
+  0x0A931B14: "@COM/itempic/pict11.dds"
+  0xCAA08034: "@COM/itempic/pict19.dds"
+  
+  # ./effect/
+  0xC4C32BE3: "@COM/effect/orbs.dds"
+
+  # ./obj/
+  0x0F92318E: "@COM/obj/P_EX100/1.dds"
+  0xB901C8DB: "@COM/obj/P_EX100/0.dds"
+  0x6EB9CB0E: "@COM/obj/P_EX100/HUD.dds"

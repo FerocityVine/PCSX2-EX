@@ -22,6 +22,86 @@
 #include "stdafx.h"
 #include "GSRendererHW.h"
 
+#include <iomanip>
+#include <xxhash.hpp>
+
+#include "ghc/filesystem.h"
+#include "yaml-cpp/yaml.h"
+
+#include <gli.hpp>
+
+using namespace std;
+using namespace xxh;
+
+int _yamlParse = 1;
+
+map<uint32_t, GSTexture *> _texMap;
+map<uint32_t, string> _repTextures;
+
+string getHex32(uint32_t input)
+{
+    string _tempStr;
+    stringstream _convStream;
+
+    _convStream.seekg(0, ios::beg);
+    _convStream << setfill('0') << setw(8) << std::hex << input;
+
+    _tempStr = _convStream.str();
+    std::transform(_tempStr.begin(), _tempStr.end(), _tempStr.begin(), ::toupper);
+
+    return _tempStr;
+}
+
+int GSRendererHW::TryParseYaml()
+{
+    if (m_crc == 0)
+        return 1;
+
+    else if (m_texture_funcs) {
+        struct stat _statBuf = {};
+        std::string _crcText = getHex32(m_crc);
+
+        if (m_texture_replace) {
+            std::string _dir = "txtconfig\\";
+
+            _dir.append(_crcText);
+            _dir.append(".yaml");
+
+            if (stat(_dir.c_str(), &_statBuf) == 0) {
+                YAML::Node _yamlFile = YAML::LoadFile(_dir);
+
+                printf("GSdx: Found the texture configuration file! Processing...\n");
+                printf("GSdx: Capturing textures...\n");
+
+                if (_yamlFile["ProcessTEX"]) {
+                    auto _table = _yamlFile["ProcessTEX"];
+
+                    for (auto elem : _table) {
+                        auto _pair = std::pair<uint32_t, std::string>(elem.first.as<uint32_t>(), elem.second.as<std::string>());
+                        _repTextures.insert(_pair);
+                    }
+                }
+
+                else
+                    printf("GSdx: Texture definition table is not found!\n");
+
+                printf("GSdx: All done!\n");
+                return 0;
+            }
+
+            else {
+                printf("GSdx: The config file for this game cannot be found or is invalid. Texture replacements are disabled.\n");
+
+                m_texture_funcs = 0;
+                m_texture_replace = 0;
+                m_texture_extract = 1;
+
+                return -1;
+            }
+        }
+    }
+}
+
 GSRendererHW::GSRendererHW(GSTextureCache* tc)
 	: m_width(default_rt_size.x)
 	, m_height(default_rt_size.y)
@@ -36,12 +116,20 @@ GSRendererHW::GSRendererHW(GSTextureCache* tc)
 	, m_userhacks_tcoffset_x(0)
 	, m_userhacks_tcoffset_y(0)
 	, m_channel_shuffle(false)
-	, m_lod(GSVector2i(0,0))
+    , m_lod(GSVector2i(0, 0))
+    , m_draw_iterator(0)
+    , m_texture_funcs(0)
+    , m_texture_replace(0)
+    , m_texture_extract(1)
 {
 	m_mipmap = theApp.GetConfigI("mipmap_hw");
 	m_upscale_multiplier = theApp.GetConfigI("upscale_multiplier");
 	m_large_framebuffer  = theApp.GetConfigB("large_framebuffer");
 	m_accurate_date = theApp.GetConfigI("accurate_date");
+
+	m_texture_funcs = theApp.GetConfigB("texture_funcs");
+    m_texture_replace = theApp.GetConfigB("texture_replace");
+	m_texture_extract = theApp.GetConfigB("texture_extract");
 
 	if (theApp.GetConfigB("UserHacks")) {
 		m_userhacks_enabled_gs_mem_clear = !theApp.GetConfigB("UserHacks_Disable_Safe_Features");
@@ -74,6 +162,9 @@ GSRendererHW::GSRendererHW(GSTextureCache* tc)
 		m_userhacks_align_sprite_X       = false;
 		m_userHacks_merge_sprite         = false;
 	}
+
+	_texMap = {};
+    _repTextures = {};
 
 	m_dump_root = root_hw;
 }
@@ -266,6 +357,14 @@ void GSRendererHW::Reset()
 
 	m_reset = true;
 
+    for (auto const &x : _texMap)
+        delete x.second;
+
+    _texMap = {};
+    _repTextures = {};
+
+    _yamlParse = 1;
+
 	GSRenderer::Reset();
 }
 
@@ -295,6 +394,14 @@ void GSRendererHW::VSync(int field)
 void GSRendererHW::ResetDevice()
 {
 	m_tc->RemoveAll();
+
+	for (auto const &x : _texMap)
+        delete x.second;
+
+    _texMap = {};
+    _repTextures = {};
+
+    _yamlParse = 1;
 
 	GSRenderer::ResetDevice();
 }
@@ -1017,453 +1124,553 @@ void GSRendererHW::RoundSpriteOffset()
 
 void GSRendererHW::Draw()
 {
-	if(m_dev->IsLost() || IsBadFrame()) {
-		GL_INS("Warning skipping a draw call (%d)", s_n);
-		return;
-	}
-	GL_PUSH("HW Draw %d", s_n);
+    if (m_texture_extract && m_texture_funcs) {
+        std::string _crcText = getHex32(m_crc);
+        std::string _pathSys = "textures\\@DUMP\\";
 
-	GSDrawingEnvironment& env = m_env;
-	GSDrawingContext* context = m_context;
-	const GSLocalMemory::psm_t& tex_psm = GSLocalMemory::m_psm[m_context->TEX0.PSM];
+        _pathSys.append(_crcText);
 
-	// Fix TEX0 size
-	if(PRIM->TME && !IsMipMapActive())
-		m_context->ComputeFixedTEX0(m_vt.m_min.t.xyxy(m_vt.m_max.t));
+        if (ghc::filesystem::create_directories(_pathSys))
+            printf("GSdx: Creating necessary folders if they do not exist.\n");
+    }
 
-	// skip alpha test if possible
-	// Note: do it first so we know if frame/depth writes are masked
+    if ((!m_texture_funcs || m_texture_extract) && _yamlParse != 1) {
+        if (_yamlParse == 0) {
+            for (auto const &x : _texMap)
+                delete x.second;
 
-	GIFRegTEST TEST = context->TEST;
-	GIFRegFRAME FRAME = context->FRAME;
-	GIFRegZBUF ZBUF = context->ZBUF;
+            _texMap = {};
+            _repTextures = {};
+        }
 
-	uint32 fm = context->FRAME.FBMSK;
-	uint32 zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
+        _yamlParse = 1;
+    }
 
-	// Note required to compute TryAlphaTest below. So do it now.
-	if (PRIM->TME && tex_psm.pal > 0)
-		m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+    if (_yamlParse == 1 && (m_texture_replace && m_texture_funcs))
+        _yamlParse = TryParseYaml();
 
-	//  Test if we can optimize Alpha Test as a NOP
-	context->TEST.ATE = context->TEST.ATE && !GSRenderer::TryAlphaTest(fm, zm);
+    if (m_dev->IsLost() || IsBadFrame()) {
+        GL_INS("Warning skipping a draw call (%d)", s_n);
+        return;
+    }
+    GL_PUSH("HW Draw %d", s_n);
 
-	context->FRAME.FBMSK = fm;
-	context->ZBUF.ZMSK = zm != 0;
+    GSDrawingEnvironment &env = m_env;
+    GSDrawingContext *context = m_context;
+    const GSLocalMemory::psm_t &tex_psm = GSLocalMemory::m_psm[m_context->TEX0.PSM];
 
-	// It is allowed to use the depth and rt at the same location. However at least 1 must
-	// be disabled. Or the written value must be the same on both channels.
-	// 1/ GoW uses a Cd blending on a 24 bits buffer (no alpha)
-	// 2/ SuperMan really draws (0,0,0,0) color and a (0) 32-bits depth
-	// 3/ 50cents really draws (0,0,0,128) color and a (0) 24 bits depth
-	// Note: FF DoC has both buffer at same location but disable the depth test (write?) with ZTE = 0
-	const bool no_rt = (context->ALPHA.IsCd() && PRIM->ABE && (context->FRAME.PSM == 1));
-	const bool no_ds = !no_rt && (
-			// Depth is always pass/fail (no read) and write are discarded (tekken 5).  (Note: DATE is currently implemented with a stencil buffer => a depth/stencil buffer)
-			(zm != 0 && m_context->TEST.ZTST <= ZTST_ALWAYS && !m_context->TEST.DATE) ||
-			// Depth will be written through the RT
-			(context->FRAME.FBP == context->ZBUF.ZBP && !PRIM->TME && zm == 0 && fm == 0 && context->TEST.ZTE)
-			);
+    // Fix TEX0 size
+    if (PRIM->TME && !IsMipMapActive())
+        m_context->ComputeFixedTEX0(m_vt.m_min.t.xyxy(m_vt.m_max.t));
 
-	const bool draw_sprite_tex = PRIM->TME && (m_vt.m_primclass == GS_SPRITE_CLASS);
-	const GSVector4 delta_p = m_vt.m_max.p - m_vt.m_min.p;
-	bool single_page = (delta_p.x <= 64.0f) && (delta_p.y <= 64.0f);
+    // skip alpha test if possible
+    // Note: do it first so we know if frame/depth writes are masked
 
-	if (m_channel_shuffle) {
-		m_channel_shuffle = draw_sprite_tex && (m_context->TEX0.PSM == PSM_PSMT8) && single_page;
-		if (m_channel_shuffle) {
-			GL_CACHE("Channel shuffle effect detected SKIP");
-			return;
-		}
-	} else if (draw_sprite_tex && m_context->FRAME.Block() == m_context->TEX0.TBP0) {
-		// Special post-processing effect
-		if ((m_context->TEX0.PSM == PSM_PSMT8) && single_page) {
-			GL_INS("Channel shuffle effect detected");
-			m_channel_shuffle = true;
-		} else {
-			GL_DBG("Special post-processing effect not supported");
-			m_channel_shuffle = false;
-		}
-	} else {
-		m_channel_shuffle = false;
-	}
+    GIFRegTEST TEST = context->TEST;
+    GIFRegFRAME FRAME = context->FRAME;
+    GIFRegZBUF ZBUF = context->ZBUF;
 
-	GIFRegTEX0 TEX0;
+    uint32 fm = context->FRAME.FBMSK;
+    uint32 zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
 
-	TEX0.TBP0 = context->FRAME.Block();
-	TEX0.TBW = context->FRAME.FBW;
-	TEX0.PSM = context->FRAME.PSM;
+    // Note required to compute TryAlphaTest below. So do it now.
+    if (PRIM->TME && tex_psm.pal > 0)
+        m_mem.m_clut.Read32(context->TEX0, env.TEXA);
 
-	GSTextureCache::Target* rt = NULL;
-	GSTexture* rt_tex = NULL;
-	if (!no_rt) {
-		rt = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::RenderTarget, true, fm);
-		rt_tex = rt->m_texture;
-	}
+    //  Test if we can optimize Alpha Test as a NOP
+    context->TEST.ATE = context->TEST.ATE && !GSRenderer::TryAlphaTest(fm, zm);
 
-	TEX0.TBP0 = context->ZBUF.Block();
-	TEX0.TBW = context->FRAME.FBW;
-	TEX0.PSM = context->ZBUF.PSM;
+    context->FRAME.FBMSK = fm;
+    context->ZBUF.ZMSK = zm != 0;
 
-	GSTextureCache::Target* ds = NULL;
-	GSTexture* ds_tex = NULL;
-	if (!no_ds) {
-		ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, context->DepthWrite());
-		ds_tex = ds->m_texture;
-	}
+    // It is allowed to use the depth and rt at the same location. However at least 1 must
+    // be disabled. Or the written value must be the same on both channels.
+    // 1/ GoW uses a Cd blending on a 24 bits buffer (no alpha)
+    // 2/ SuperMan really draws (0,0,0,0) color and a (0) 32-bits depth
+    // 3/ 50cents really draws (0,0,0,128) color and a (0) 24 bits depth
+    // Note: FF DoC has both buffer at same location but disable the depth test (write?) with ZTE = 0
+    const bool no_rt = (context->ALPHA.IsCd() && PRIM->ABE && (context->FRAME.PSM == 1));
+    const bool no_ds = !no_rt && (
+                                     // Depth is always pass/fail (no read) and write are discarded (tekken 5).  (Note: DATE is currently implemented with a stencil buffer => a depth/stencil buffer)
+                                     (zm != 0 && m_context->TEST.ZTST <= ZTST_ALWAYS && !m_context->TEST.DATE) ||
+                                     // Depth will be written through the RT
+                                     (context->FRAME.FBP == context->ZBUF.ZBP && !PRIM->TME && zm == 0 && fm == 0 && context->TEST.ZTE));
 
-	m_src = nullptr;
-	m_texture_shuffle = false;
+    const bool draw_sprite_tex = PRIM->TME && (m_vt.m_primclass == GS_SPRITE_CLASS);
+    const GSVector4 delta_p = m_vt.m_max.p - m_vt.m_min.p;
+    bool single_page = (delta_p.x <= 64.0f) && (delta_p.y <= 64.0f);
 
-	if(PRIM->TME)
-	{
-		GIFRegCLAMP MIP_CLAMP = context->CLAMP;
-		int mxl = std::min<int>((int)m_context->TEX1.MXL, 6);
-		m_lod = GSVector2i(0, 0);
+    if (m_channel_shuffle) {
+        m_channel_shuffle = draw_sprite_tex && (m_context->TEX0.PSM == PSM_PSMT8) && single_page;
+        if (m_channel_shuffle) {
+            GL_CACHE("Channel shuffle effect detected SKIP");
+            return;
+        }
+    } else if (draw_sprite_tex && m_context->FRAME.Block() == m_context->TEX0.TBP0) {
+        // Special post-processing effect
+        if ((m_context->TEX0.PSM == PSM_PSMT8) && single_page) {
+            GL_INS("Channel shuffle effect detected");
+            m_channel_shuffle = true;
+        } else {
+            GL_DBG("Special post-processing effect not supported");
+            m_channel_shuffle = false;
+        }
+    } else {
+        m_channel_shuffle = false;
+    }
 
-		// Code from the SW renderer
-		if (IsMipMapActive()) {
-			int interpolation = (context->TEX1.MMIN & 1) + 1; // 1: round, 2: tri
+    GIFRegTEX0 TEX0;
 
-			int k = (m_context->TEX1.K + 8) >> 4;
-			int lcm = m_context->TEX1.LCM;
+    TEX0.TBP0 = context->FRAME.Block();
+    TEX0.TBW = context->FRAME.FBW;
+    TEX0.PSM = context->FRAME.PSM;
 
-			if ((int)m_vt.m_lod.x >= mxl) {
-				k = mxl; // set lod to max level
-				lcm = 1; // constant lod
-			}
+    GSTextureCache::Target *rt = NULL;
+    GSTexture *rt_tex = NULL;
+    if (!no_rt) {
+        rt = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::RenderTarget, true, fm);
+        rt_tex = rt->m_texture;
+    }
 
-			if (PRIM->FST) {
-				ASSERT(lcm == 1);
-				ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
+    TEX0.TBP0 = context->ZBUF.Block();
+    TEX0.TBW = context->FRAME.FBW;
+    TEX0.PSM = context->ZBUF.PSM;
 
-				lcm = 1;
-			}
+    GSTextureCache::Target *ds = NULL;
+    GSTexture *ds_tex = NULL;
+    if (!no_ds) {
+        ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, context->DepthWrite());
+        ds_tex = ds->m_texture;
+    }
 
-			if (lcm == 1) {
-				m_lod.x = std::max<int>(k, 0);
-				m_lod.y = m_lod.x;
-			} else {
-				// Not constant but who care !
-				if (interpolation == 2) {
-					// Mipmap Linear. Both layers are sampled, only take the big one
-					m_lod.x = std::max<int>((int)floor(m_vt.m_lod.x), 0);
-				} else {
-					// On GS lod is a fixed float number 7:4 (4 bit for the frac part)
+    m_src = nullptr;
+    m_texture_shuffle = false;
+
+    if (PRIM->TME) {
+        GIFRegCLAMP MIP_CLAMP = context->CLAMP;
+        int mxl = std::min<int>((int)m_context->TEX1.MXL, 6);
+        m_lod = GSVector2i(0, 0);
+
+        // Code from the SW renderer
+        if (IsMipMapActive()) {
+            int interpolation = (context->TEX1.MMIN & 1) + 1; // 1: round, 2: tri
+
+            int k = (m_context->TEX1.K + 8) >> 4;
+            int lcm = m_context->TEX1.LCM;
+
+            if ((int)m_vt.m_lod.x >= mxl) {
+                k = mxl; // set lod to max level
+                lcm = 1; // constant lod
+            }
+
+            if (PRIM->FST) {
+                ASSERT(lcm == 1);
+                ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
+
+                lcm = 1;
+            }
+
+            if (lcm == 1) {
+                m_lod.x = std::max<int>(k, 0);
+                m_lod.y = m_lod.x;
+            } else {
+                // Not constant but who care !
+                if (interpolation == 2) {
+                    // Mipmap Linear. Both layers are sampled, only take the big one
+                    m_lod.x = std::max<int>((int)floor(m_vt.m_lod.x), 0);
+                } else {
+                    // On GS lod is a fixed float number 7:4 (4 bit for the frac part)
 #if 0
 					m_lod.x = std::max<int>((int)round(m_vt.m_lod.x + 0.0625), 0);
 #else
-					// Same as above with a bigger margin on rounding
-					// The goal is to avoid 1 undrawn pixels around the edge which trigger the load of the big
-					// layer.
-					if (ceil(m_vt.m_lod.x) < m_vt.m_lod.y)
-						m_lod.x = std::max<int>((int)round(m_vt.m_lod.x + 0.0625 + 0.01), 0);
-					else
-						m_lod.x = std::max<int>((int)round(m_vt.m_lod.x + 0.0625), 0);
+                    // Same as above with a bigger margin on rounding
+                    // The goal is to avoid 1 undrawn pixels around the edge which trigger the load of the big
+                    // layer.
+                    if (ceil(m_vt.m_lod.x) < m_vt.m_lod.y)
+                        m_lod.x = std::max<int>((int)round(m_vt.m_lod.x + 0.0625 + 0.01), 0);
+                    else
+                        m_lod.x = std::max<int>((int)round(m_vt.m_lod.x + 0.0625), 0);
 #endif
-				}
+                }
 
-				m_lod.y = std::max<int>((int)ceil(m_vt.m_lod.y), 0);
-			}
+                m_lod.y = std::max<int>((int)ceil(m_vt.m_lod.y), 0);
+            }
 
-			m_lod.x = std::min<int>(m_lod.x, mxl);
-			m_lod.y = std::min<int>(m_lod.y, mxl);
+            m_lod.x = std::min<int>(m_lod.x, mxl);
+            m_lod.y = std::min<int>(m_lod.y, mxl);
 
-			TEX0 = GetTex0Layer(m_lod.x);
+            TEX0 = GetTex0Layer(m_lod.x);
 
-			MIP_CLAMP.MINU >>= m_lod.x;
-			MIP_CLAMP.MINV >>= m_lod.x;
-			MIP_CLAMP.MAXU >>= m_lod.x;
-			MIP_CLAMP.MAXV >>= m_lod.x;
+            MIP_CLAMP.MINU >>= m_lod.x;
+            MIP_CLAMP.MINV >>= m_lod.x;
+            MIP_CLAMP.MAXU >>= m_lod.x;
+            MIP_CLAMP.MAXV >>= m_lod.x;
 
-			for (int i = 0; i < m_lod.x; i++) {
-				m_vt.m_min.t *= 0.5f;
-				m_vt.m_max.t *= 0.5f;
-			}
+            for (int i = 0; i < m_lod.x; i++) {
+                m_vt.m_min.t *= 0.5f;
+                m_vt.m_max.t *= 0.5f;
+            }
 
-			GL_CACHE("Mipmap LOD %d %d (%f %f) new size %dx%d (K %d L %u)", m_lod.x, m_lod.y, m_vt.m_lod.x, m_vt.m_lod.y, 1 << TEX0.TW, 1 << TEX0.TH, m_context->TEX1.K, m_context->TEX1.L);
-		} else {
-			TEX0 = GetTex0Layer(0);
-		}
+            GL_CACHE("Mipmap LOD %d %d (%f %f) new size %dx%d (K %d L %u)", m_lod.x, m_lod.y, m_vt.m_lod.x, m_vt.m_lod.y, 1 << TEX0.TW, 1 << TEX0.TH, m_context->TEX1.K, m_context->TEX1.L);
+        } else {
+            TEX0 = GetTex0Layer(0);
+        }
 
-		m_context->offset.tex = m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+        m_context->offset.tex = m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
-		GSVector4i r;
+        GSVector4i r;
 
-		GetTextureMinMax(r, TEX0, MIP_CLAMP, m_vt.IsLinear());
+        GetTextureMinMax(r, TEX0, MIP_CLAMP, m_vt.IsLinear());
 
-		m_src = tex_psm.depth ? m_tc->LookupDepthSource(TEX0, env.TEXA, r) : m_tc->LookupSource(TEX0, env.TEXA, r);
+        m_src = tex_psm.depth ? m_tc->LookupDepthSource(TEX0, env.TEXA, r) : m_tc->LookupSource(TEX0, env.TEXA, r);
 
-		// Round 2
-		if (IsMipMapActive() && m_mipmap == 2 && !tex_psm.depth) {
-			// Upload remaining texture layers
-			GSVector4 tmin = m_vt.m_min.t;
-			GSVector4 tmax = m_vt.m_max.t;
+        // Round 2
+        if (IsMipMapActive() && m_mipmap == 2 && !tex_psm.depth) {
+            // Upload remaining texture layers
+            GSVector4 tmin = m_vt.m_min.t;
+            GSVector4 tmax = m_vt.m_max.t;
 
-			for (int layer = m_lod.x + 1; layer <= m_lod.y; layer++) {
-				const GIFRegTEX0& MIP_TEX0 = GetTex0Layer(layer);
+            for (int layer = m_lod.x + 1; layer <= m_lod.y; layer++) {
+                const GIFRegTEX0 &MIP_TEX0 = GetTex0Layer(layer);
 
-				m_context->offset.tex = m_mem.GetOffset(MIP_TEX0.TBP0, MIP_TEX0.TBW, MIP_TEX0.PSM);
+                m_context->offset.tex = m_mem.GetOffset(MIP_TEX0.TBP0, MIP_TEX0.TBW, MIP_TEX0.PSM);
 
-				MIP_CLAMP.MINU >>= 1;
-				MIP_CLAMP.MINV >>= 1;
-				MIP_CLAMP.MAXU >>= 1;
-				MIP_CLAMP.MAXV >>= 1;
+                MIP_CLAMP.MINU >>= 1;
+                MIP_CLAMP.MINV >>= 1;
+                MIP_CLAMP.MAXU >>= 1;
+                MIP_CLAMP.MAXV >>= 1;
 
-				m_vt.m_min.t *= 0.5f;
-				m_vt.m_max.t *= 0.5f;
+                m_vt.m_min.t *= 0.5f;
+                m_vt.m_max.t *= 0.5f;
 
-				GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, m_vt.IsLinear());
+                GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, m_vt.IsLinear());
 
-				m_src->UpdateLayer(MIP_TEX0, r, layer - m_lod.x);
-			}
+                m_src->UpdateLayer(MIP_TEX0, r, layer - m_lod.x);
+            }
 
-			m_vt.m_min.t = tmin;
-			m_vt.m_max.t = tmax;
-		}
+            m_vt.m_min.t = tmin;
+            m_vt.m_max.t = tmax;
+        }
 
-		// Hypothesis: texture shuffle is used as a postprocessing effect so texture will be an old target.
-		// Initially code also tested the RT but it gives too much false-positive
-		//
-		// Both input and output are 16 bits and texture was initially 32 bits!
-		m_texture_shuffle = (GSLocalMemory::m_psm[context->FRAME.PSM].bpp == 16) && (tex_psm.bpp == 16)
-			&& draw_sprite_tex && m_src->m_32_bits_fmt;
+        // Hypothesis: texture shuffle is used as a postprocessing effect so texture will be an old target.
+        // Initially code also tested the RT but it gives too much false-positive
+        //
+        // Both input and output are 16 bits and texture was initially 32 bits!
+        m_texture_shuffle = (GSLocalMemory::m_psm[context->FRAME.PSM].bpp == 16) && (tex_psm.bpp == 16) && draw_sprite_tex && m_src->m_32_bits_fmt;
 
-		// Shadow_of_memories_Shadow_Flickering (Okami mustn't call this code)
-		if (m_texture_shuffle && m_vertex.next < 3 && PRIM->FST && (m_context->FRAME.FBMSK == 0)) {
-			// Avious dubious call to m_texture_shuffle on 16 bits games
-			// The pattern is severals column of 8 pixels. A single sprite
-			// smell fishy but a big sprite is wrong.
+        // Shadow_of_memories_Shadow_Flickering (Okami mustn't call this code)
+        if (m_texture_shuffle && m_vertex.next < 3 && PRIM->FST && (m_context->FRAME.FBMSK == 0)) {
+            // Avious dubious call to m_texture_shuffle on 16 bits games
+            // The pattern is severals column of 8 pixels. A single sprite
+            // smell fishy but a big sprite is wrong.
 
-			// Tomb Raider Angel of Darkness relies on this behavior to produce a fog effect.
-			// In this case, the address of the framebuffer and texture are the same. 
-			// The game will take RG => BA and then the BA => RG of next pixels. 
-			// However, only RG => BA needs to be emulated because RG isn't used.
-			GL_INS("WARNING: Possible misdetection of a texture shuffle effect");
+            // Tomb Raider Angel of Darkness relies on this behavior to produce a fog effect.
+            // In this case, the address of the framebuffer and texture are the same.
+            // The game will take RG => BA and then the BA => RG of next pixels.
+            // However, only RG => BA needs to be emulated because RG isn't used.
+            GL_INS("WARNING: Possible misdetection of a texture shuffle effect");
 
-			GSVertex* v = &m_vertex.buff[0];
-			m_texture_shuffle = ((v[1].U - v[0].U) < 256) || m_context->FRAME.Block() == m_context->TEX0.TBP0;
-		}
+            GSVertex *v = &m_vertex.buff[0];
+            m_texture_shuffle = ((v[1].U - v[0].U) < 256) || m_context->FRAME.Block() == m_context->TEX0.TBP0;
+        }
 
-		// Texture shuffle is not yet supported with strange clamp mode
-		ASSERT(!m_texture_shuffle || (context->CLAMP.WMS < 3 && context->CLAMP.WMT < 3));
+        // Texture shuffle is not yet supported with strange clamp mode
+        ASSERT(!m_texture_shuffle || (context->CLAMP.WMS < 3 && context->CLAMP.WMT < 3));
 
-		if (m_src->m_target && m_context->TEX0.PSM == PSM_PSMT8 && single_page && draw_sprite_tex) {
-			GL_INS("Channel shuffle effect detected (2nd shot)");
-			m_channel_shuffle = true;
-		} else {
-			m_channel_shuffle = false;
-		}
-	}
-	if (rt) {
-		// Be sure texture shuffle detection is properly propagated
-		// Otherwise set or clear the flag (Code in texture cache only set the flag)
-		// Note: it is important to clear the flag when RT is used as a real 16 bits target.
-		rt->m_32_bits_fmt = m_texture_shuffle || (GSLocalMemory::m_psm[context->FRAME.PSM].bpp != 16);
-	}
+        if (m_src->m_target && m_context->TEX0.PSM == PSM_PSMT8 && single_page && draw_sprite_tex) {
+            GL_INS("Channel shuffle effect detected (2nd shot)");
+            m_channel_shuffle = true;
+        } else {
+            m_channel_shuffle = false;
+        }
+    }
+    if (rt) {
+        // Be sure texture shuffle detection is properly propagated
+        // Otherwise set or clear the flag (Code in texture cache only set the flag)
+        // Note: it is important to clear the flag when RT is used as a real 16 bits target.
+        rt->m_32_bits_fmt = m_texture_shuffle || (GSLocalMemory::m_psm[context->FRAME.PSM].bpp != 16);
+    }
 
-	if(s_dump)
-	{
-		uint64 frame = m_perfmon.GetFrame();
+    if (s_dump) {
+        uint64 frame = m_perfmon.GetFrame();
 
-		std::string s;
+        std::string s;
 
-		if (s_n >= s_saven) {
-			// Dump Register state
-			s = format("%05d_context.txt", s_n);
+        if (s_n >= s_saven) {
+            // Dump Register state
+            s = format("%05d_context.txt", s_n);
 
-			m_env.Dump(m_dump_root+s);
-			m_context->Dump(m_dump_root+s);
-		}
+            m_env.Dump(m_dump_root + s);
+            m_context->Dump(m_dump_root + s);
+        }
 
-		if(s_savet && s_n >= s_saven && m_src)
-		{
-			s = format("%05d_f%lld_itex_%05x_%s_%d%d_%02x_%02x_%02x_%02x.dds",
-				s_n, frame, (int)context->TEX0.TBP0, psm_str(context->TEX0.PSM),
-				(int)context->CLAMP.WMS, (int)context->CLAMP.WMT,
-				(int)context->CLAMP.MINU, (int)context->CLAMP.MAXU,
-				(int)context->CLAMP.MINV, (int)context->CLAMP.MAXV);
+        if (s_savet && s_n >= s_saven && m_src) {
+            s = format("%05d_f%lld_itex_%05x_%s_%d%d_%02x_%02x_%02x_%02x.dds",
+                       s_n, frame, (int)context->TEX0.TBP0, psm_str(context->TEX0.PSM),
+                       (int)context->CLAMP.WMS, (int)context->CLAMP.WMT,
+                       (int)context->CLAMP.MINU, (int)context->CLAMP.MAXU,
+                       (int)context->CLAMP.MINV, (int)context->CLAMP.MAXV);
 
-			m_src->m_texture->Save(m_dump_root+s);
+            m_src->m_texture->Save(m_dump_root + s);
 
-			if(m_src->m_palette)
-			{
-				s = format("%05d_f%lld_itpx_%05x_%s.dds", s_n, frame, context->TEX0.CBP, psm_str(context->TEX0.CPSM));
+            if (m_src->m_palette) {
+                s = format("%05d_f%lld_itpx_%05x_%s.dds", s_n, frame, context->TEX0.CBP, psm_str(context->TEX0.CPSM));
 
-				m_src->m_palette->Save(m_dump_root+s);
-			}
-		}
+                m_src->m_palette->Save(m_dump_root + s);
+            }
+        }
 
-		if(s_save && s_n >= s_saven)
-		{
-			s = format("%05d_f%lld_rt0_%05x_%s.bmp", s_n, frame, context->FRAME.Block(), psm_str(context->FRAME.PSM));
+        if (s_save && s_n >= s_saven) {
+            s = format("%05d_f%lld_rt0_%05x_%s.bmp", s_n, frame, context->FRAME.Block(), psm_str(context->FRAME.PSM));
 
-			if (rt)
-				rt->m_texture->Save(m_dump_root+s);
-		}
+            if (rt)
+                rt->m_texture->Save(m_dump_root + s);
+        }
 
-		if(s_savez && s_n >= s_saven)
-		{
-			s = format("%05d_f%lld_rz0_%05x_%s.bmp", s_n, frame, context->ZBUF.Block(), psm_str(context->ZBUF.PSM));
+        if (s_savez && s_n >= s_saven) {
+            s = format("%05d_f%lld_rz0_%05x_%s.bmp", s_n, frame, context->ZBUF.Block(), psm_str(context->ZBUF.PSM));
 
-			if (ds_tex)
-				ds_tex->Save(m_dump_root+s);
-		}
+            if (ds_tex)
+                ds_tex->Save(m_dump_root + s);
+        }
+    }
 
-	}
+    // The rectangle of the draw
+    m_r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(context->scissor.in));
 
-	// The rectangle of the draw
-	m_r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(context->scissor.in));
+    if (m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt_tex, ds_tex, m_src)) {
+        GL_INS("Warning skipping a draw call (%d)", s_n);
+        return;
+    }
 
-	if(m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt_tex, ds_tex, m_src))
-	{
-		GL_INS("Warning skipping a draw call (%d)", s_n);
-		return;
-	}
+    if (!OI_BlitFMV(rt, m_src, m_r)) {
+        GL_INS("Warning skipping a draw call (%d)", s_n);
+        return;
+    }
 
-	if (!OI_BlitFMV(rt, m_src, m_r)) {
-		GL_INS("Warning skipping a draw call (%d)", s_n);
-		return;
-	}
+    if (m_userhacks_enabled_gs_mem_clear) {
+        // Constant Direct Write without texture/test/blending (aka a GS mem clear)
+        if ((m_vt.m_primclass == GS_SPRITE_CLASS) && !PRIM->TME              // Direct write
+            && (!PRIM->ABE || m_context->ALPHA.IsOpaque())                   // No transparency
+            && (m_context->FRAME.FBMSK == 0)                                 // no color mask
+            && !m_context->TEST.ATE                                          // no alpha test
+            && (!m_context->TEST.ZTE || m_context->TEST.ZTST == ZTST_ALWAYS) // no depth test
+            && (m_vt.m_eq.rgba == 0xFFFF)                                    // constant color write
+            && m_r.x == 0 && m_r.y == 0) {                                   // Likely full buffer write
 
-	if (m_userhacks_enabled_gs_mem_clear) {
-		// Constant Direct Write without texture/test/blending (aka a GS mem clear)
-		if ((m_vt.m_primclass == GS_SPRITE_CLASS) && !PRIM->TME // Direct write
-				&& (!PRIM->ABE || m_context->ALPHA.IsOpaque()) // No transparency
-				&& (m_context->FRAME.FBMSK == 0) // no color mask
-				&& !m_context->TEST.ATE // no alpha test
-				&& (!m_context->TEST.ZTE || m_context->TEST.ZTST == ZTST_ALWAYS) // no depth test
-				&& (m_vt.m_eq.rgba == 0xFFFF) // constant color write
-				&& m_r.x == 0 && m_r.y == 0) { // Likely full buffer write
+            OI_GsMemClear();
 
-			OI_GsMemClear();
+            OI_DoubleHalfClear(rt_tex, ds_tex);
+        }
+    }
 
-			OI_DoubleHalfClear(rt_tex, ds_tex);
-		}
-	}
+    // A couple of hack to avoid upscaling issue. So far it seems to impacts mostly sprite
+    // Note: first hack corrects both position and texture coordinate
+    // Note: second hack corrects only the texture coordinate
+    if ((m_upscale_multiplier > 1) && (m_vt.m_primclass == GS_SPRITE_CLASS)) {
+        size_t count = m_vertex.next;
+        GSVertex *v = &m_vertex.buff[0];
 
-	// A couple of hack to avoid upscaling issue. So far it seems to impacts mostly sprite
-	// Note: first hack corrects both position and texture coordinate
-	// Note: second hack corrects only the texture coordinate
-	if ((m_upscale_multiplier > 1) && (m_vt.m_primclass == GS_SPRITE_CLASS)) {
-		size_t count = m_vertex.next;
-		GSVertex* v = &m_vertex.buff[0];
+        // Hack to avoid vertical black line in various games (ace combat/tekken)
+        if (m_userhacks_align_sprite_X) {
+            // Note for performance reason I do the check only once on the first
+            // primitive
+            int win_position = v[1].XYZ.X - context->XYOFFSET.OFX;
+            const bool unaligned_position = ((win_position & 0xF) == 8);
+            const bool unaligned_texture = ((v[1].U & 0xF) == 0) && PRIM->FST; // I'm not sure this check is useful
+            const bool hole_in_vertex = (count < 4) || (v[1].XYZ.X != v[2].XYZ.X);
+            if (hole_in_vertex && unaligned_position && (unaligned_texture || !PRIM->FST)) {
+                // Normaly vertex are aligned on full pixels and texture in half
+                // pixels. Let's extend the coverage of an half-pixel to avoid
+                // hole after upscaling
+                for (size_t i = 0; i < count; i += 2) {
+                    v[i + 1].XYZ.X += 8;
+                    // I really don't know if it is a good idea. Neither what to do for !PRIM->FST
+                    if (unaligned_texture)
+                        v[i + 1].U += 8;
+                }
+            }
+        }
 
-		// Hack to avoid vertical black line in various games (ace combat/tekken)
-		if (m_userhacks_align_sprite_X) {
-			// Note for performance reason I do the check only once on the first
-			// primitive
-			int win_position = v[1].XYZ.X - context->XYOFFSET.OFX;
-			const bool unaligned_position = ((win_position & 0xF) == 8);
-			const bool unaligned_texture  = ((v[1].U & 0xF) == 0) && PRIM->FST; // I'm not sure this check is useful
-			const bool hole_in_vertex = (count < 4) || (v[1].XYZ.X != v[2].XYZ.X);
-			if (hole_in_vertex && unaligned_position && (unaligned_texture || !PRIM->FST)) {
-				// Normaly vertex are aligned on full pixels and texture in half
-				// pixels. Let's extend the coverage of an half-pixel to avoid
-				// hole after upscaling
-				for(size_t i = 0; i < count; i += 2) {
-					v[i+1].XYZ.X += 8;
-					// I really don't know if it is a good idea. Neither what to do for !PRIM->FST
-					if (unaligned_texture)
-						v[i+1].U += 8;
-				}
-			}
-		}
+        // Noting to do if no texture is sampled
+        if (PRIM->FST && draw_sprite_tex) {
+            if ((m_userhacks_round_sprite_offset > 1) || (m_userhacks_round_sprite_offset == 1 && !m_vt.IsLinear())) {
+                if (m_vt.IsLinear())
+                    RoundSpriteOffset<true>();
+                else
+                    RoundSpriteOffset<false>();
+            }
+        } else {
+            ; // vertical line in Yakuza (note check m_userhacks_align_sprite_X behavior)
+        }
+    }
 
-		// Noting to do if no texture is sampled
-		if (PRIM->FST && draw_sprite_tex) {
-			if ((m_userhacks_round_sprite_offset > 1) || (m_userhacks_round_sprite_offset == 1 && !m_vt.IsLinear())) {
-				if (m_vt.IsLinear())
-					RoundSpriteOffset<true>();
-				else
-					RoundSpriteOffset<false>();
-			}
-		} else {
-			; // vertical line in Yakuza (note check m_userhacks_align_sprite_X behavior)
-		}
-	}
+		std::string _path = "textures\\";
+    uint32_t _currentChecksum = 0;
+    bool _replaceBool = false;
 
-	//
+    if (m_src && !m_src->m_from_target && m_texture_funcs) {
+        struct stat _statBuf = {};
 
-	DrawPrims(rt_tex, ds_tex, m_src);
+        if (m_texture_extract) {
+            auto const _h = (1 << m_context->TEX0.TH);
+            auto const _w = (1 << m_context->TEX0.TW);
 
-	//
+            auto const _pitch = _w * 4;
+            auto const _rect = GSVector4i(0, 0, _w, _h);
 
-	context->TEST = TEST;
-	context->FRAME = FRAME;
-	context->ZBUF = ZBUF;
+            auto const _length = _pitch * _h;
+            void *_data = _aligned_malloc(_length, 32);
 
-	//
+            const GSOffset *_offset = m_mem.GetOffset(m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM);
+            auto _pointer = static_cast<uint8 *>(_data);
 
-	// Help to detect rendering outside of the framebuffer
+            m_mem.ReadTexture(_offset, _rect, _pointer, _pitch, m_src->m_TEXA);
+            _currentChecksum = xxhash<32>(_pointer, _length);
+
+            bool _fileCaptured = false;
+
+            if (m_src->m_palette_obj) {
+
+                if (m_texture_replace) {
+                    if (_repTextures.find(_currentChecksum) != _repTextures.end()) {
+                        _path.append(_repTextures[_currentChecksum]);
+                        _fileCaptured = true;
+                    }
+
+                    if (_fileCaptured) {
+                        if (_texMap.find(_currentChecksum) == _texMap.end()) {
+                            if (stat(_path.c_str(), &_statBuf) == 0) {
+                                gli::texture _ddsFile = gli::load(_path.c_str());
+                            }
+                        }
+
+                        else
+                            _replaceBool = true;
+                    }
+                }
+
+                else if (m_draw_iterator == 0) {
+                    _statBuf = {};
+
+                    _path.append("@DUMP\\")
+                        .append(getHex32(m_crc))
+                        .append("\\")
+                        .append(getHex32(_currentChecksum))
+                        .append(".dds");
+
+                    if (stat(_path.c_str(), &_statBuf) == 0) {
+                        if (m_context->TEX0.TCC == 0)
+                            for (int i = 3; i < _length; i += 4)
+                                _pointer[i] = 255;
+
+                        auto _tex = m_dev->CreateTexture(_w, _h);
+                        _tex->Update(_rect, _data, _pitch);
+
+                        if (m_context->CLAMP.MAXU > 0 || m_context->CLAMP.MINU > 0) {
+                            auto const _u = m_context->CLAMP.MAXU > 0 ? m_context->CLAMP.MAXU : m_context->CLAMP.MINU;
+                            auto const _v = m_context->CLAMP.MAXV > 0 ? m_context->CLAMP.MAXV : m_context->CLAMP.MINV;
+
+                            auto const _uvRect = GSVector4i(0, 0, _u, _v);
+                            auto _texSave = m_dev->CreateTexture(_u + 32 - (_u % 32), _v + 32 - (_v % 32));
+
+                            m_dev->CopyRect(_tex, _texSave, _uvRect);
+                            _texSave->SaveDDS(_path);
+                        }
+
+                        else if (_w == 1024 && _h == 1024) {
+                            auto const _fW = m_src->m_write.rect->right;
+                            auto const _fH = m_src->m_write.rect->bottom;
+
+                            auto const _uvRect = GSVector4i(0, 0, _fW, _fH);
+                            auto _texSave = m_dev->CreateTexture(_fW + 32 - (_fW % 32), _fH + 32 - (_fH % 32));
+
+                            m_dev->CopyRect(_tex, _texSave, _uvRect);
+                            _texSave->SaveDDS(_path);
+                        }
+
+                        else
+                            _tex->SaveDDS(_path);
+                    }
+                }
+
+                _aligned_free(_data);
+            }
+        }
+
+        DrawPrims(rt_tex, ds_tex, m_src);
+
+        //
+
+        context->TEST = TEST;
+        context->FRAME = FRAME;
+        context->ZBUF = ZBUF;
+
+        //
+
+        // Help to detect rendering outside of the framebuffer
 #if _DEBUG
-	if (m_upscale_multiplier * m_r.z > m_width) {
-		GL_INS("ERROR: RT width is too small only %d but require %d", m_width, m_upscale_multiplier * m_r.z);
-	}
-	if (m_upscale_multiplier * m_r.w > m_height) {
-		GL_INS("ERROR: RT height is too small only %d but require %d", m_height, m_upscale_multiplier * m_r.w);
-	}
+        if (m_upscale_multiplier * m_r.z > m_width) {
+            GL_INS("ERROR: RT width is too small only %d but require %d", m_width, m_upscale_multiplier * m_r.z);
+        }
+        if (m_upscale_multiplier * m_r.w > m_height) {
+            GL_INS("ERROR: RT height is too small only %d but require %d", m_height, m_upscale_multiplier * m_r.w);
+        }
 #endif
 
-	if(fm != 0xffffffff && rt)
-	{
-		//rt->m_valid = rt->m_valid.runion(r);
-		rt->UpdateValidity(m_r);
+        if (fm != 0xffffffff && rt) {
+            //rt->m_valid = rt->m_valid.runion(r);
+            rt->UpdateValidity(m_r);
 
-		m_tc->InvalidateVideoMem(context->offset.fb, m_r, false);
+            m_tc->InvalidateVideoMem(context->offset.fb, m_r, false);
 
-		m_tc->InvalidateVideoMemType(GSTextureCache::DepthStencil, context->FRAME.Block());
-	}
+            m_tc->InvalidateVideoMemType(GSTextureCache::DepthStencil, context->FRAME.Block());
+        }
 
-	if(zm != 0xffffffff && ds)
-	{
-		//ds->m_valid = ds->m_valid.runion(r);
-		ds->UpdateValidity(m_r);
+        if (zm != 0xffffffff && ds) {
+            //ds->m_valid = ds->m_valid.runion(r);
+            ds->UpdateValidity(m_r);
 
-		m_tc->InvalidateVideoMem(context->offset.zb, m_r, false);
+            m_tc->InvalidateVideoMem(context->offset.zb, m_r, false);
 
-		m_tc->InvalidateVideoMemType(GSTextureCache::RenderTarget, context->ZBUF.Block());
-	}
+            m_tc->InvalidateVideoMemType(GSTextureCache::RenderTarget, context->ZBUF.Block());
+        }
 
-	//
+        //
 
-	if(m_hacks.m_oo)
-	{
-		(this->*m_hacks.m_oo)();
-	}
+        if (m_hacks.m_oo) {
+            (this->*m_hacks.m_oo)();
+        }
 
-	if(s_dump)
-	{
-		uint64 frame = m_perfmon.GetFrame();
+        if (s_dump) {
+            uint64 frame = m_perfmon.GetFrame();
 
-		std::string s;
+            std::string s;
 
-		if(s_save && s_n >= s_saven)
-		{
-			s = format("%05d_f%lld_rt1_%05x_%s.bmp", s_n, frame, context->FRAME.Block(), psm_str(context->FRAME.PSM));
+            if (s_save && s_n >= s_saven) {
+                s = format("%05d_f%lld_rt1_%05x_%s.bmp", s_n, frame, context->FRAME.Block(), psm_str(context->FRAME.PSM));
 
-			if (rt)
-				rt->m_texture->Save(m_dump_root+s);
-		}
+                if (rt)
+                    rt->m_texture->Save(m_dump_root + s);
+            }
 
-		if(s_savez && s_n >= s_saven)
-		{
-			s = format("%05d_f%lld_rz1_%05x_%s.bmp", s_n, frame, context->ZBUF.Block(), psm_str(context->ZBUF.PSM));
+            if (s_savez && s_n >= s_saven) {
+                s = format("%05d_f%lld_rz1_%05x_%s.bmp", s_n, frame, context->ZBUF.Block(), psm_str(context->ZBUF.PSM));
 
-			if (ds_tex)
-				ds_tex->Save(m_dump_root+s);
-		}
+                if (ds_tex)
+                    ds_tex->Save(m_dump_root + s);
+            }
 
-		if(s_savel > 0 && (s_n - s_saven) > s_savel)
-		{
-			s_dump = 0;
-		}
-	}
+            if (s_savel > 0 && (s_n - s_saven) > s_savel) {
+                s_dump = 0;
+            }
+        }
 
-	#ifdef DISABLE_HW_TEXTURE_CACHE
-	if (rt)
-		m_tc->Read(rt, m_r);
-	#endif
+#ifdef DISABLE_HW_TEXTURE_CACHE
+        if (rt)
+            m_tc->Read(rt, m_r);
+#endif
+    }
 }
 
 // hacks

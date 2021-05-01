@@ -74,7 +74,7 @@ class GSRendererOGL final : public GSRendererHW
 		inline void EmulateTextureShuffleAndFbmask();
 		inline void EmulateChannelShuffle(GSTexture** rt, const GSTextureCache::Source* tex);
 		inline void EmulateBlending(bool DATE_GL42);
-		inline void EmulateTextureSampler(const GSTextureCache::Source* tex);
+        inline void EmulateTextureSampler(const GSTextureCache::Source *tex, GSTexture *inp = nullptr);
 		inline void EmulateAtst(const int pass, const GSTextureCache::Source* tex);
 		inline void EmulateZbuffer();
 
@@ -84,7 +84,7 @@ class GSRendererOGL final : public GSRendererHW
 
 		bool CreateDevice(GSDevice* dev);
 
-		void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) final;
+		void DrawPrims(GSTexture *rt, GSTexture *ds, GSTextureCache::Source *tex, GSTexture *inp = nullptr) final;
 
 		PRIM_OVERLAP PrimitiveOverlap();
 

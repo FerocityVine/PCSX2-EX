@@ -46,12 +46,14 @@ protected:
 	bool m_fxaa;
 	bool m_shadeboost;
 	bool m_texture_shuffle;
+    
 	GSVector2i m_real_size;
 
 	virtual GSTexture* GetOutput(int i, int& y_offset) = 0;
 	virtual GSTexture* GetFeedbackOutput() { return nullptr; }
 
 public:
+    bool m_texture_funcs, m_texture_replace, m_texture_extract;
 	std::shared_ptr<GSWnd> m_wnd;
 	GSDevice* m_dev;
 

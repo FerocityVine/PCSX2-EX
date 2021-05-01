@@ -35,6 +35,11 @@ private:
 	bool m_reset;
 	int m_upscale_multiplier;
 	int m_userhacks_ts_half_bottom;
+    int m_draw_iterator;
+
+	bool m_texture_funcs;
+    bool m_texture_replace;
+    bool m_texture_extract;
 
 	bool m_large_framebuffer;
 	bool m_userhacks_align_sprite_X;
@@ -146,7 +151,8 @@ protected:
 	GSVector4i m_r;
 	GSTextureCache::Source* m_src;
 
-	virtual void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) = 0;
+    int TryParseYaml();
+    virtual void DrawPrims(GSTexture *rt, GSTexture *ds, GSTextureCache::Source *tex, GSTexture *inp = nullptr) = 0;
 
 	int m_userhacks_round_sprite_offset;
 	int m_userHacks_HPO;

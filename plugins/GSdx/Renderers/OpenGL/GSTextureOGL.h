@@ -72,6 +72,8 @@ class GSTextureOGL final : public GSTexture
 		void Unmap() final;
 		void GenerateMipmap() final;
 		bool Save(const std::string& fn) final;
+        bool SaveDDS(const std::string &fn) final;
+
 
 		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }
 		bool IsDss() { return (m_type == GSTexture::DepthStencil || m_type == GSTexture::SparseDepthStencil); }

@@ -50,6 +50,8 @@ public:
 	virtual void Unmap() = 0;
 	virtual void GenerateMipmap() {}
 	virtual bool Save(const std::string& fn) = 0;
+    virtual bool SaveDDS(const std::string &fn) = 0;
+
 	virtual uint32 GetID() { return 0; }
 
 	GSVector2 GetScale() const {return m_scale;}
