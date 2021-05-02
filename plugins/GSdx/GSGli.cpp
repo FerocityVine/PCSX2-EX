@@ -28,3 +28,20 @@ gli_extent gli_texture::GetExtent(size_t layer)
 
 	return {gliExtent.x, gliExtent.y, gliExtent.z};
 }
+
+size_t gli_texture::GetBlockSize()
+{
+    if (!mGliTexture.has_value())
+        return 0;
+
+    return gli::block_size(std::any_cast<gli::texture>(mGliTexture).format());
+}
+
+gli_format gli_texture::GetFormat()
+{
+    if (!mGliTexture.has_value())
+        return gli_format::FORMAT_UNDEFINED;
+
+    return static_cast<gli_format>(std::any_cast<gli::texture>(mGliTexture).format());
+}
+
