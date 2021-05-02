@@ -28,7 +28,8 @@
 #include "ghc/filesystem.h"
 #include "yaml-cpp/yaml.h"
 
-#include <gli.hpp>
+#include "GSGli.h"
+
 
 using namespace std;
 using namespace xxh;
@@ -1541,7 +1542,7 @@ void GSRendererHW::Draw()
                     if (_fileCaptured) {
                         if (_texMap.find(_currentChecksum) == _texMap.end()) {
                             if (stat(_path.c_str(), &_statBuf) == 0) {
-                                gli::texture _ddsFile = gli::load(_path.c_str());
+								gli_texture _ddsFile = gli_texture{_path.c_str()};
                             }
                         }
 

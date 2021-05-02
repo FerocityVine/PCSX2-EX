@@ -267,6 +267,9 @@
     <ClCompile Include="Window\GSSettingsDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSGli.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderers\OpenGL\GLLoader.h">
@@ -540,6 +543,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Renderers\Common\GSFastList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSGli.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
