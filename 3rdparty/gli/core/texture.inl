@@ -5,7 +5,7 @@ namespace gli
 	inline texture::texture()
 		: Storage(nullptr)
 		, Target(static_cast<gli::target>(TARGET_INVALID))
-		, Format(static_cast<gli::format>(FORMAT_INVALID))
+		, Format(gli::FORMAT_UNDEFINED)
 		, BaseLayer(0), MaxLayer(0)
 		, BaseFace(0), MaxFace(0)
 		, BaseLevel(0), MaxLevel(0)
@@ -282,6 +282,7 @@ namespace gli
 	template <typename gen_type>
 	inline void texture::clear(gen_type const& Texel)
 	{
+		GLI_ASSERT(!gli::is_compressed(this->format()));
 		GLI_ASSERT(!this->empty());
 		GLI_ASSERT(block_size(this->format()) == sizeof(gen_type));
 
@@ -295,6 +296,7 @@ namespace gli
 	template <typename gen_type>
 	inline void texture::clear(size_type Layer, size_type Face, size_type Level, gen_type const& BlockData)
 	{
+		GLI_ASSERT(!gli::is_compressed(this->format()));
 		GLI_ASSERT(!this->empty());
 		GLI_ASSERT(block_size(this->format()) == sizeof(gen_type));
 		GLI_ASSERT(Layer >= 0 && Layer < this->layers() && Face >= 0 && Face < this->faces() && Level >= 0 && Level < this->levels());
@@ -342,7 +344,7 @@ namespace gli
 		GLI_ASSERT(FaceDst < this->faces());
 		GLI_ASSERT(LevelSrc < TextureSrc.levels());
 		GLI_ASSERT(LevelDst < this->levels());
-		
+
 		memcpy(
 			this->data(LayerDst, FaceDst, LevelDst),
 			TextureSrc.data(LayerSrc, FaceSrc, LevelSrc),
@@ -361,7 +363,7 @@ namespace gli
 		this->Storage->copy(
 			*TextureSrc.Storage,
 			LayerSrc, FaceSrc, LevelSrc, OffsetSrc / BlockExtent,
-			LayerSrc, FaceSrc, LevelSrc, OffsetSrc / BlockExtent,
+			LayerDst, FaceDst, LevelDst, OffsetDst / BlockExtent,
 			Extent / BlockExtent);
 	}
 
