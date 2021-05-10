@@ -45,3 +45,10 @@ gli_format gli_texture::GetFormat()
     return static_cast<gli_format>(std::any_cast<gli::texture>(mGliTexture).format());
 }
 
+bool gli_texture::IsEmpty()
+{
+    if (!mGliTexture.has_value())
+        return true;
+
+    return false;
+}

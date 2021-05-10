@@ -160,6 +160,17 @@ const char* dialog_message(int ID, bool* updateText) {
 		case IDC_MEMORY_WRAPPING:
 			return "Emulates GS memory wrapping accurately. This fixes issues where part of the image is cut-off by block shaped sections such as the FMVs in Wallace & Gromit: The Curse of the Were-Rabbit and Thrillville.\n\n"
 				"Note: This hack can have a small impact on performance.";
+        case IDC_ENABLE_TEX:
+            return "Enables texture dumping/replacing functionality.\n"
+                   "Cannot be used with 8-bit Textures enabled.\n";
+        case IDC_SAVE_TEX:
+            return "Dumps textures from the GS Memory.\n"
+                   "Inaccurate with Turbo active, may impact the\n"
+                   "performance significantly [Dumps happen once every 60 frames].";
+        case IDC_LOAD_TEX:
+            return "Loads textures from a designated folder\n"
+                   "and replaces the textures on the renderer. It has no\n"
+                   "effect on EE or GS memory and has minimal performance impact. Go wild.";
 		case IDC_MERGE_PP_SPRITE:
 			return "Replaces post-processing multiple paving sprites by a single fat sprite.\n"
 				" It reduces various upscaling lines.\n\n"

@@ -30,7 +30,6 @@
 
 #include "GSGli.h"
 
-
 using namespace std;
 using namespace xxh;
 
@@ -93,9 +92,9 @@ int GSRendererHW::TryParseYaml()
             else {
                 printf("GSdx: The config file for this game cannot be found or is invalid. Texture replacements are disabled.\n");
 
-                m_texture_funcs = 0;
-                m_texture_replace = 0;
-                m_texture_extract = 1;
+                m_texture_funcs = false;
+                m_texture_replace = false;
+                m_texture_extract = true;
 
                 return -1;
             }
@@ -119,9 +118,6 @@ GSRendererHW::GSRendererHW(GSTextureCache* tc)
 	, m_channel_shuffle(false)
     , m_lod(GSVector2i(0, 0))
     , m_draw_iterator(0)
-    , m_texture_funcs(0)
-    , m_texture_replace(0)
-    , m_texture_extract(1)
 {
 	m_mipmap = theApp.GetConfigI("mipmap_hw");
 	m_upscale_multiplier = theApp.GetConfigI("upscale_multiplier");
@@ -1506,172 +1502,244 @@ void GSRendererHW::Draw()
         }
     }
 
-		std::string _path = "textures\\";
+    string _path = "";
     uint32_t _currentChecksum = 0;
     bool _replaceBool = false;
 
     if (m_src && !m_src->m_from_target && m_texture_funcs) {
         struct stat _statBuf = {};
 
-        if (m_texture_extract) {
-            auto const _h = (1 << m_context->TEX0.TH);
-            auto const _w = (1 << m_context->TEX0.TW);
+		_path = "textures\\";
 
-            auto const _pitch = _w * 4;
-            auto const _rect = GSVector4i(0, 0, _w, _h);
+        auto const _h = (1 << m_context->TEX0.TH);
+        auto const _w = (1 << m_context->TEX0.TW);
 
-            auto const _length = _pitch * _h;
-            void *_data = _aligned_malloc(_length, 32);
+        auto const _pitch = _w * 4;
+        auto const _rect = GSVector4i(0, 0, _w, _h);
 
-            const GSOffset *_offset = m_mem.GetOffset(m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM);
-            auto _pointer = static_cast<uint8 *>(_data);
+        auto const _length = _pitch * _h;
+        void *_data = _aligned_malloc(_length, 32);
 
-            m_mem.ReadTexture(_offset, _rect, _pointer, _pitch, m_src->m_TEXA);
-            _currentChecksum = xxhash<32>(_pointer, _length);
+        const GSOffset *_offset = m_mem.GetOffset(m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM);
+        auto _pointer = static_cast<uint8 *>(_data);
 
-            bool _fileCaptured = false;
+        m_mem.ReadTexture(_offset, _rect, _pointer, _pitch, m_src->m_TEXA);
+        _currentChecksum = xxhash<32>(_pointer, _length);
 
-            if (m_src->m_palette_obj) {
+        bool _fileCaptured = false;
 
-                if (m_texture_replace) {
-                    if (_repTextures.find(_currentChecksum) != _repTextures.end()) {
-                        _path.append(_repTextures[_currentChecksum]);
-                        _fileCaptured = true;
-                    }
+        if (m_texture_replace) {
+            if (_repTextures.find(_currentChecksum) != _repTextures.end()) {
+                _path.append(_repTextures[_currentChecksum]);
+                _fileCaptured = true;
+            }
 
-                    if (_fileCaptured) {
-                        if (_texMap.find(_currentChecksum) == _texMap.end()) {
-                            if (stat(_path.c_str(), &_statBuf) == 0) {
-								gli_texture _ddsFile = gli_texture{_path.c_str()};
-                            }
-                        }
-
-                        else
-                            _replaceBool = true;
-                    }
-                }
-
-                else if (m_draw_iterator == 0) {
-                    _statBuf = {};
-
-                    _path.append("@DUMP\\")
-                        .append(getHex32(m_crc))
-                        .append("\\")
-                        .append(getHex32(_currentChecksum))
-                        .append(".dds");
-
+            if (_fileCaptured) {
+                if (_texMap.find(_currentChecksum) == _texMap.end()) {
                     if (stat(_path.c_str(), &_statBuf) == 0) {
-                        if (m_context->TEX0.TCC == 0)
-                            for (int i = 3; i < _length; i += 4)
-                                _pointer[i] = 255;
+                        gli_texture _ddsFile = gli_texture(_path.c_str());
+                        auto _ddsExtent = _ddsFile.GetExtent(0);
+                        auto _ddsData = _ddsFile.GetData(0, 0, 0);
 
-                        auto _tex = m_dev->CreateTexture(_w, _h);
-                        _tex->Update(_rect, _data, _pitch);
+                        if (_ddsData != nullptr) {
+                            auto _tex = m_dev->CreateTexture(_ddsExtent.x, _ddsExtent.y);
+                            auto _ddsPoint = static_cast<uint8_t *>(_ddsData);
 
-                        if (m_context->CLAMP.MAXU > 0 || m_context->CLAMP.MINU > 0) {
-                            auto const _u = m_context->CLAMP.MAXU > 0 ? m_context->CLAMP.MAXU : m_context->CLAMP.MINU;
-                            auto const _v = m_context->CLAMP.MAXV > 0 ? m_context->CLAMP.MAXV : m_context->CLAMP.MINV;
+                            for (uint32_t i = 0; i < _ddsExtent.x * _ddsExtent.y * 0x04; i += 0x04)
+                                _ddsPoint[0x03 + i] = _ddsPoint[0x03 + i] / 2;
 
-                            auto const _uvRect = GSVector4i(0, 0, _u, _v);
-                            auto _texSave = m_dev->CreateTexture(_u + 32 - (_u % 32), _v + 32 - (_v % 32));
+                            auto const _pitchDDS = _ddsExtent.x * 0x04;
 
-                            m_dev->CopyRect(_tex, _texSave, _uvRect);
-                            _texSave->SaveDDS(_path);
+                            auto const _rectDDS = GSVector4i(0, 0, _ddsExtent.x, _ddsExtent.y);
+                            _tex->Update(_rectDDS, _ddsData, _pitchDDS, 0);
+
+                            if (m_context->CLAMP.MAXU > 0 || m_context->CLAMP.MINU > 0) {
+
+                                auto _u = m_context->CLAMP.MAXU > 0 ? m_context->CLAMP.MAXU : m_context->CLAMP.MINU;
+                                auto _v = m_context->CLAMP.MAXV > 0 ? m_context->CLAMP.MAXV : m_context->CLAMP.MINV;
+
+                                _u += 32 - (_u % 32);
+                                _v += 32 - (_v % 32);
+
+                                int const _wt = (1 << m_context->TEX0.TW) / _u;
+                                int const _ht = (1 << static_cast<uint32>(m_context->TEX0.TH)) / _v;
+
+                                auto _wD = _wt * _ddsExtent.x;
+                                auto _hD = _ht * _ddsExtent.y;
+
+                                _wD = pow(2, ceil(log(_w) / log(2)));
+                                _hD = pow(2, ceil(log(_h) / log(2)));
+
+                                auto _texFIX = m_dev->CreateTexture(_wD, _hD);
+                                m_dev->CopyRect(_tex, _texFIX, _rectDDS);
+
+                                _texMap.insert(std::pair<uint32_t, GSTexture *>(_currentChecksum, _texFIX));
+                            }
+
+                            else if (m_context->TEX0.TW == 1024 && m_context->TEX0.TH == 1024) {
+                                auto _fW = m_src->m_write.rect->right;
+                                auto _fH = m_src->m_write.rect->bottom;
+
+                                _fW += 32 - (_fW % 32);
+                                _fH += 32 - (_fH % 32);
+
+                                int const _wt = (1 << m_context->TEX0.TW) / _fW;
+                                int const _ht = (1 << static_cast<uint32>(m_context->TEX0.TH)) / _fH;
+
+                                auto _wD = _wt * _ddsExtent.x;
+                                auto _hD = _ht * _ddsExtent.y;
+
+                                _wD = pow(2, ceil(log(_w) / log(2)));
+                                _hD = pow(2, ceil(log(_h) / log(2)));
+
+                                auto _texFIX = m_dev->CreateTexture(_wD, _hD);
+                                m_dev->CopyRect(_tex, _texFIX, _rectDDS);
+
+                                _texMap.insert(std::pair<uint32_t, GSTexture *>(_currentChecksum, _texFIX));
+                            }
+
+                            else
+                                _texMap.insert(std::pair<uint32_t, GSTexture *>(_currentChecksum, _tex));
+
+                            _replaceBool = true;
                         }
-
-                        else if (_w == 1024 && _h == 1024) {
-                            auto const _fW = m_src->m_write.rect->right;
-                            auto const _fH = m_src->m_write.rect->bottom;
-
-                            auto const _uvRect = GSVector4i(0, 0, _fW, _fH);
-                            auto _texSave = m_dev->CreateTexture(_fW + 32 - (_fW % 32), _fH + 32 - (_fH % 32));
-
-                            m_dev->CopyRect(_tex, _texSave, _uvRect);
-                            _texSave->SaveDDS(_path);
-                        }
-
-                        else
-                            _tex->SaveDDS(_path);
                     }
                 }
 
-                _aligned_free(_data);
+                else
+                    _replaceBool = true;
             }
         }
 
+        if (m_texture_extract && m_draw_iterator == 0) {
+            _statBuf = {};
+
+            _path.append("@DUMP\\")
+                .append(getHex32(m_crc))
+                .append("\\")
+                .append(getHex32(_currentChecksum))
+                .append(".dds");
+
+            if (stat(_path.c_str(), &_statBuf) != 0) {
+
+                if (m_context->TEX0.TCC == 0)
+                    for (int i = 3; i < _length; i += 4)
+                        _pointer[i] = 255;
+
+                auto _tex = m_dev->CreateTexture(_w, _h);
+                _tex->Update(_rect, _data, _pitch);
+
+                if (m_context->CLAMP.MAXU > 0 || m_context->CLAMP.MINU > 0) {
+                    auto const _u = m_context->CLAMP.MAXU > 0 ? m_context->CLAMP.MAXU : m_context->CLAMP.MINU;
+                    auto const _v = m_context->CLAMP.MAXV > 0 ? m_context->CLAMP.MAXV : m_context->CLAMP.MINV;
+
+                    auto const _uvRect = GSVector4i(0, 0, _u, _v);
+                    auto _texSave = m_dev->CreateTexture(_u + 32 - (_u % 32), _v + 32 - (_v % 32));
+
+                    m_dev->CopyRect(_tex, _texSave, _uvRect);
+                    _texSave->SaveDDS(_path);
+                }
+
+                else if (_w == 1024 && _h == 1024) {
+                    auto const _fW = m_src->m_write.rect->right;
+                    auto const _fH = m_src->m_write.rect->bottom;
+
+                    auto const _uvRect = GSVector4i(0, 0, _fW, _fH);
+                    auto _texSave = m_dev->CreateTexture(_fW + 32 - (_fW % 32), _fH + 32 - (_fH % 32));
+
+                    m_dev->CopyRect(_tex, _texSave, _uvRect);
+                    _texSave->SaveDDS(_path);
+                }
+
+                else
+                    _tex->SaveDDS(_path);
+            }
+        }
+
+        _aligned_free(_data);
+    }
+
+	m_draw_iterator++;
+
+	if (m_draw_iterator > 60)
+        m_draw_iterator = 0;
+
+    if (_replaceBool)
+        DrawPrims(rt_tex, ds_tex, m_src, _texMap[_currentChecksum]);
+
+    else
         DrawPrims(rt_tex, ds_tex, m_src);
 
-        //
+    //
 
-        context->TEST = TEST;
-        context->FRAME = FRAME;
-        context->ZBUF = ZBUF;
+    context->TEST = TEST;
+    context->FRAME = FRAME;
+    context->ZBUF = ZBUF;
 
-        //
+    //
 
-        // Help to detect rendering outside of the framebuffer
+    // Help to detect rendering outside of the framebuffer
 #if _DEBUG
-        if (m_upscale_multiplier * m_r.z > m_width) {
-            GL_INS("ERROR: RT width is too small only %d but require %d", m_width, m_upscale_multiplier * m_r.z);
-        }
-        if (m_upscale_multiplier * m_r.w > m_height) {
-            GL_INS("ERROR: RT height is too small only %d but require %d", m_height, m_upscale_multiplier * m_r.w);
-        }
+    if (m_upscale_multiplier * m_r.z > m_width) {
+        GL_INS("ERROR: RT width is too small only %d but require %d", m_width, m_upscale_multiplier * m_r.z);
+    }
+    if (m_upscale_multiplier * m_r.w > m_height) {
+        GL_INS("ERROR: RT height is too small only %d but require %d", m_height, m_upscale_multiplier * m_r.w);
+    }
 #endif
 
-        if (fm != 0xffffffff && rt) {
-            //rt->m_valid = rt->m_valid.runion(r);
-            rt->UpdateValidity(m_r);
+    if (fm != 0xffffffff && rt) {
+        //rt->m_valid = rt->m_valid.runion(r);
+        rt->UpdateValidity(m_r);
 
-            m_tc->InvalidateVideoMem(context->offset.fb, m_r, false);
+        m_tc->InvalidateVideoMem(context->offset.fb, m_r, false);
 
-            m_tc->InvalidateVideoMemType(GSTextureCache::DepthStencil, context->FRAME.Block());
+        m_tc->InvalidateVideoMemType(GSTextureCache::DepthStencil, context->FRAME.Block());
+    }
+
+    if (zm != 0xffffffff && ds) {
+        //ds->m_valid = ds->m_valid.runion(r);
+        ds->UpdateValidity(m_r);
+
+        m_tc->InvalidateVideoMem(context->offset.zb, m_r, false);
+
+        m_tc->InvalidateVideoMemType(GSTextureCache::RenderTarget, context->ZBUF.Block());
+    }
+
+    //
+
+    if (m_hacks.m_oo) {
+        (this->*m_hacks.m_oo)();
+    }
+
+    if (s_dump) {
+        uint64 frame = m_perfmon.GetFrame();
+
+        std::string s;
+
+        if (s_save && s_n >= s_saven) {
+            s = format("%05d_f%lld_rt1_%05x_%s.bmp", s_n, frame, context->FRAME.Block(), psm_str(context->FRAME.PSM));
+
+            if (rt)
+                rt->m_texture->Save(m_dump_root + s);
         }
 
-        if (zm != 0xffffffff && ds) {
-            //ds->m_valid = ds->m_valid.runion(r);
-            ds->UpdateValidity(m_r);
+        if (s_savez && s_n >= s_saven) {
+            s = format("%05d_f%lld_rz1_%05x_%s.bmp", s_n, frame, context->ZBUF.Block(), psm_str(context->ZBUF.PSM));
 
-            m_tc->InvalidateVideoMem(context->offset.zb, m_r, false);
-
-            m_tc->InvalidateVideoMemType(GSTextureCache::RenderTarget, context->ZBUF.Block());
+            if (ds_tex)
+                ds_tex->Save(m_dump_root + s);
         }
 
-        //
-
-        if (m_hacks.m_oo) {
-            (this->*m_hacks.m_oo)();
+        if (s_savel > 0 && (s_n - s_saven) > s_savel) {
+            s_dump = 0;
         }
-
-        if (s_dump) {
-            uint64 frame = m_perfmon.GetFrame();
-
-            std::string s;
-
-            if (s_save && s_n >= s_saven) {
-                s = format("%05d_f%lld_rt1_%05x_%s.bmp", s_n, frame, context->FRAME.Block(), psm_str(context->FRAME.PSM));
-
-                if (rt)
-                    rt->m_texture->Save(m_dump_root + s);
-            }
-
-            if (s_savez && s_n >= s_saven) {
-                s = format("%05d_f%lld_rz1_%05x_%s.bmp", s_n, frame, context->ZBUF.Block(), psm_str(context->ZBUF.PSM));
-
-                if (ds_tex)
-                    ds_tex->Save(m_dump_root + s);
-            }
-
-            if (s_savel > 0 && (s_n - s_saven) > s_savel) {
-                s_dump = 0;
-            }
-        }
+    }
 
 #ifdef DISABLE_HW_TEXTURE_CACHE
-        if (rt)
-            m_tc->Read(rt, m_r);
+    if (rt)
+        m_tc->Read(rt, m_r);
 #endif
-    }
 }
 
 // hacks

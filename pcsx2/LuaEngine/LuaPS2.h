@@ -148,6 +148,18 @@ public:
 		u32 Value = memRead32(Input01);
 		return Value + Input02;
 	}
+
+    static u32 UnsignedShift32(u32 base, u32 shift)
+    {
+        string _inBinary = bitset<32>(base).to_string();
+        string _outBinary = "00000000000000000000000000000000";
+
+        for (u32 i = 0; i < 32 - shift; i++)
+            _outBinary[i] = _inBinary[i + shift];
+
+        u32 _out = bitset<32>(_outBinary).to_ulong();
+        return _out;
+    }
 	#pragma endregion
 	
 	#pragma region File I/O Functions

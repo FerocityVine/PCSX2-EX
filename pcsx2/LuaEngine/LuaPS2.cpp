@@ -36,7 +36,7 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 	luaState["SCRIPT_PATH"] = Path::GetDirectory(Input01).ToStdString();
 	luaState["CHEATS_PATH"] = GetCheatsFolder().ToString().ToStdString();
 
-	luaState["ENGINE_VERSION"] = 3;
+	luaState["ENGINE_VERSION"] = 4.2;
 	luaState["ENGINE_TYPE"] = "ENGINE";
 	luaState["GAME_ID"] = Input02;
 
@@ -84,9 +84,30 @@ void LuaPS2::SetFunctions()
 
 	// Calculators
 	luaState.set_function("GetPointer", Calculate_Pointer);
+    luaState.set_function("ULShift32", UnsignedShift32);
 
 	// IO Operations
 	luaState.set_function("ReadFile", sol::overload(File_Read, File_ReadRegion));
+    luaState.set_function("ConsolePrint", sol::overload([this](sol::object Text) {
+                              Console.WriteLn(Color_StrongMagenta, "[" + luaState.globals()["LUA_NAME"].get<string>() + "] " + Text.as<string>());
+                          },
+                                                        [this](sol::object Text, int MessageType) {
+                                                            auto _scrString = "[" + luaState.globals()["LUA_NAME"].get<string>() + "] ";
+                                                            switch (MessageType) {
+                                                                default:
+                                                                    Console.WriteLn(Color_StrongMagenta, _scrString + "MESSAGE: " + Text.as<string>());
+                                                                    break;
+                                                                case 1:
+                                                                    Console.WriteLn(Color_StrongGreen, _scrString + "SUCCESS: " + Text.as<string>());
+                                                                    break;
+                                                                case 2:
+                                                                    Console.WriteLn(Color_StrongOrange, _scrString + "WARNING: " + Text.as<string>());
+                                                                    break;
+                                                                case 3:
+                                                                    Console.WriteLn(Color_StrongRed, _scrString + "ERROR: " + Text.as<string>());
+                                                                    break;
+                                                            }
+                                                        }));
 
 	// Writers
 	luaState.set_function("WriteByte",    Write_UInt08);
@@ -104,5 +125,9 @@ void LuaPS2::SetFunctions()
     luaState.set_function("UpdateState", DCInstance::UpdateState);
     luaState.set_function("UpdateLImage", DCInstance::UpdateLImage);
     luaState.set_function("UpdateSImage", DCInstance::UpdateSImage);
+
+
+	luaState.set_function("GetHertz", []() { return 60; });
+    luaState.set_function("SetHertz", []() { return false; });
 }
 

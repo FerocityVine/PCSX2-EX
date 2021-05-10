@@ -131,6 +131,9 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_CRC_LEVEL, theApp.m_gs_crc_level, theApp.GetConfigI("crc_hack_level"));
 
 	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfigB("paltex"));
+    CheckDlgButton(m_hWnd, IDC_ENABLE_TEX, theApp.GetConfigB("texture_funcs"));
+    CheckDlgButton(m_hWnd, IDC_SAVE_TEX, theApp.GetConfigB("texture_extract"));
+    CheckDlgButton(m_hWnd, IDC_LOAD_TEX, theApp.GetConfigB("texture_replace"));
 	CheckDlgButton(m_hWnd, IDC_LARGE_FB, theApp.GetConfigB("large_framebuffer"));
 	CheckDlgButton(m_hWnd, IDC_MIPMAP_SW, theApp.GetConfigB("mipmap"));
 	CheckDlgButton(m_hWnd, IDC_AA1, theApp.GetConfigB("aa1"));
@@ -151,6 +154,9 @@ void GSSettingsDlg::OnInit()
 	AddTooltip(IDC_FILTER);
 	AddTooltip(IDC_CRC_LEVEL);
 	AddTooltip(IDC_PALTEX);
+    AddTooltip(IDC_ENABLE_TEX);
+    AddTooltip(IDC_SAVE_TEX);
+    AddTooltip(IDC_LOAD_TEX);
 	AddTooltip(IDC_ACCURATE_DATE);
 	AddTooltip(IDC_ACCURATE_BLEND_UNIT);
 	AddTooltip(IDC_ACCURATE_BLEND_UNIT_D3D11);
@@ -191,6 +197,9 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 				UpdateControls();
 			break;
 		case IDC_PALTEX:
+        case IDC_ENABLE_TEX:
+        case IDC_SAVE_TEX:
+        case IDC_LOAD_TEX:
 		case IDC_HACKS_ENABLED:
 			if (code == BN_CLICKED)
 				UpdateControls();
@@ -288,7 +297,11 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("large_framebuffer", (int)IsDlgButtonChecked(m_hWnd, IDC_LARGE_FB));
 			theApp.SetConfig("aa1", (int)IsDlgButtonChecked(m_hWnd, IDC_AA1));
 			theApp.SetConfig("autoflush_sw", (int)IsDlgButtonChecked(m_hWnd, IDC_AUTO_FLUSH_SW));
-			theApp.SetConfig("UserHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_HACKS_ENABLED));
+            theApp.SetConfig("UserHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_HACKS_ENABLED));
+
+            theApp.SetConfig("texture_funcs", (int)IsDlgButtonChecked(m_hWnd, IDC_ENABLE_TEX));
+            theApp.SetConfig("texture_extract", (int)IsDlgButtonChecked(m_hWnd, IDC_SAVE_TEX));
+            theApp.SetConfig("texture_replace", (int)IsDlgButtonChecked(m_hWnd, IDC_LOAD_TEX));
 
 			// The LOWORD returned by UDM_GETPOS automatically restricts the value to its input range.
 			theApp.SetConfig("extrathreads", LOWORD(SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0)));
@@ -340,6 +353,9 @@ void GSSettingsDlg::UpdateControls()
 
 	int integer_scaling = 0; // in case reading the combo doesn't work, enable the custom res control anyway
 
+	int palette_int = (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX);
+    int enable_int = (int)IsDlgButtonChecked(m_hWnd, IDC_ENABLE_TEX);
+
 	if(ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, i))
 	{
 		integer_scaling = (int)i;
@@ -385,8 +401,10 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_CUSTOM_TEXT), hw && !integer_scaling);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_UPSCALE_MULTIPLIER), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_UPSCALE_MULTIPLIER_TEXT), hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
-
+        EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw && enable_int == 0);
+        EnableWindow(GetDlgItem(m_hWnd, IDC_ENABLE_TEX), hw && palette_int == 0);
+        EnableWindow(GetDlgItem(m_hWnd, IDC_SAVE_TEX), hw && enable_int == 1);
+        EnableWindow(GetDlgItem(m_hWnd, IDC_LOAD_TEX), hw && enable_int == 1);
 		INT_PTR filter;
 		if (ComboBoxGetSelData(IDC_FILTER, filter))
 		{

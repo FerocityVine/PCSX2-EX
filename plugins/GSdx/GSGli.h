@@ -262,6 +262,7 @@ struct gli_texture
     gli_extent GetExtent(size_t layer);
     size_t GetBlockSize();
     gli_format GetFormat();
+    bool IsEmpty();
 
 private:
 	std::any mGliTexture;
