@@ -36,7 +36,9 @@ LuaPS2::LuaPS2(wxString Input01, u32 Input02)
 	luaState["SCRIPT_PATH"] = Path::GetDirectory(Input01).ToStdString();
 	luaState["CHEATS_PATH"] = GetCheatsFolder().ToString().ToStdString();
 
-	luaState["ENGINE_VERSION"] = 4.2;
+	luaState["BASE_ADDR"] = 0x20000000;
+
+	luaState["ENGINE_VERSION"] = 4.3;
 	luaState["ENGINE_TYPE"] = "ENGINE";
 	luaState["GAME_ID"] = Input02;
 
