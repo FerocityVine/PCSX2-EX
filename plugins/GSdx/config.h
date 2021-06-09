@@ -26,11 +26,6 @@
 //#define ENABLE_ACCURATE_BUFFER_EMULATION
 #define ENABLE_JIT_RASTERIZER
 
-#define EXTERNAL_SHADER_LOADING 1
-
-//#define ENABLE_DYNAMIC_CRC_HACK
-#define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
-
 //#define DISABLE_HW_TEXTURE_CACHE // Slow but fixes a lot of bugs
 
 //#define DISABLE_BITMASKING
@@ -41,17 +36,13 @@
 
 
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(_DEVEL)
-#define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
+#define ENABLE_OGL_DEBUG // Create a debug context and check opengl command status. Allow also to dump various textures/states.
 //#define ENABLE_OGL_DEBUG_FENCE
 //#define ENABLE_OGL_DEBUG_MEM_BW // compute the quantity of data transfered (debug purpose)
 //#define ENABLE_TRACE_REG // print GS reg write
 //#define ENABLE_EXTRA_LOG // print extra log
 #endif
 
-#if defined(__unix__) && !(defined(_DEBUG) || defined(_DEVEL))
+#if (defined(__unix__) || defined(__APPLE__)) && !(defined(_DEBUG) || defined(_DEVEL))
 #define DISABLE_PERF_MON // Burn cycle for nothing in release mode
-#endif
-
-#ifdef _WIN32
-//#define ENABLE_OPENCL
 #endif

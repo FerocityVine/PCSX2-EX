@@ -39,5 +39,8 @@ public:
 	bool Map(GSMap& m, const GSVector4i* r = NULL, int layer = 0);
 	void Unmap();
 	bool Save(const std::string& fn);
-    bool SaveDDS(const std::string &fn) { return false; }
+    bool SaveDDS(const std::string &fn)
+    {
+        return false;
+    };
 };

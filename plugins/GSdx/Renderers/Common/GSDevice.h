@@ -71,7 +71,7 @@ class MergeConstantBuffer
 public:
 	GSVector4 BGColor;
 
-	MergeConstantBuffer() {memset(this, 0, sizeof(*this));}
+	MergeConstantBuffer() { memset(this, 0, sizeof(*this)); }
 };
 
 class InterlaceConstantBuffer
@@ -81,7 +81,7 @@ public:
 	float hH;
 	float _pad[1];
 
-	InterlaceConstantBuffer() {memset(this, 0, sizeof(*this));}
+	InterlaceConstantBuffer() { memset(this, 0, sizeof(*this)); }
 };
 
 class ExternalFXConstantBuffer
@@ -100,7 +100,7 @@ public:
 	GSVector4 rcpFrame;
 	GSVector4 rcpFrameOpt;
 
-	FXAAConstantBuffer() {memset(this, 0, sizeof(*this));}
+	FXAAConstantBuffer() { memset(this, 0, sizeof(*this)); }
 };
 
 class ShadeBoostConstantBuffer
@@ -109,7 +109,7 @@ public:
 	GSVector4 rcpFrame;
 	GSVector4 rcpFrameOpt;
 
-	ShadeBoostConstantBuffer() {memset(this, 0, sizeof(*this));}
+	ShadeBoostConstantBuffer() { memset(this, 0, sizeof(*this)); }
 };
 
 #pragma pack(pop)
@@ -119,12 +119,15 @@ enum HWBlendFlags
 	// A couple of flag to determine the blending behavior
 	BLEND_A_MAX  = 0x100, // Impossible blending uses coeff bigger than 1
 	BLEND_C_CLR  = 0x200, // Clear color blending (use directly the destination color as blending factor)
-	BLEND_NO_BAR = 0x400, // Doesn't require sampling of the RT as a texture
+	BLEND_NO_REC = 0x400, // Doesn't require sampling of the RT as a texture
 	BLEND_ACCU   = 0x800, // Allow to use a mix of SW and HW blending to keep the best of the 2 worlds
 };
 
 // Determines the HW blend function for DX11/OGL
-struct HWBlend { uint16 flags, op, src, dst; };
+struct HWBlend
+{
+	uint16 flags, op, src, dst;
+};
 
 class GSDevice : public GSAlignedClass<32>
 {
@@ -145,8 +148,8 @@ protected:
 		OP_ADD, OP_SUBTRACT, OP_REV_SUBTRACT
 	};
 
-	static const int m_NO_BLEND     = 0;
-	static const int m_MERGE_BLEND  = m_blendMap.size() - 1;
+	static const int m_NO_BLEND = 0;
+	static const int m_MERGE_BLEND = m_blendMap.size() - 1;
 
 	std::shared_ptr<GSWnd> m_wnd;
 	int m_vsync;
@@ -157,8 +160,14 @@ protected:
 	GSTexture* m_blend;
 	GSTexture* m_target_tmp;
 	GSTexture* m_current;
-	struct {size_t stride, start, count, limit;} m_vertex;
-	struct {size_t start, count, limit;} m_index;
+	struct
+	{
+		size_t stride, start, count, limit;
+	} m_vertex;
+	struct
+	{
+		size_t start, count, limit;
+	} m_index;
 	unsigned int m_frame; // for ageing the pool
 	bool m_linear_present;
 
@@ -180,16 +189,21 @@ public:
 
 	void Recycle(GSTexture* t);
 
-	enum {Windowed, Fullscreen, DontCare};
+	enum
+	{
+		Windowed,
+		Fullscreen,
+		DontCare
+	};
 
-	virtual bool Create(const std::shared_ptr<GSWnd> &wnd);
+	virtual bool Create(const std::shared_ptr<GSWnd>& wnd);
 	virtual bool Reset(int w, int h);
-	virtual bool IsLost(bool update = false) {return false;}
+	virtual bool IsLost(bool update = false) { return false; }
 	virtual void Present(const GSVector4i& r, int shader);
 	virtual void Present(GSTexture* sTex, GSTexture* dTex, const GSVector4& dRect, int shader = 0);
 	virtual void Flip() {}
 
-	virtual void SetVSync(int vsync) {m_vsync = vsync;}
+	virtual void SetVSync(int vsync) { m_vsync = vsync; }
 
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
@@ -212,7 +226,7 @@ public:
 	GSTexture* CreateTexture(int w, int h, int format = 0);
 	GSTexture* CreateOffscreen(int w, int h, int format = 0);
 
-	virtual GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sRect, int w, int h, int format = 0, int ps_shader = 0) {return NULL;}
+	virtual GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sRect, int w, int h, int format = 0, int ps_shader = 0) { return NULL; }
 
 	virtual void CopyRect(GSTexture* sTex, GSTexture* dTex, const GSVector4i& r) {}
 	virtual void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, int shader = 0, bool linear = true) {}
@@ -238,7 +252,7 @@ public:
 	bool ResizeTarget(GSTexture** t, int w, int h);
 	bool ResizeTarget(GSTexture** t);
 
-	bool IsRBSwapped() {return m_rbswapped;}
+	bool IsRBSwapped() { return m_rbswapped; }
 
 	void AgePool();
 	void PurgePool();
@@ -260,17 +274,17 @@ struct GSAdapter
 
 	operator std::string() const;
 	bool operator==(const GSAdapter&) const;
-	bool operator==(const std::string &s) const
+	bool operator==(const std::string& s) const
 	{
 		return (std::string)*this == s;
 	}
-	bool operator==(const char *s) const
+	bool operator==(const char* s) const
 	{
 		return (std::string)*this == s;
 	}
 
 #ifdef _WIN32
-	GSAdapter(const DXGI_ADAPTER_DESC1 &desc_dxgi);
+	GSAdapter(const DXGI_ADAPTER_DESC1& desc_dxgi);
 #endif
 #ifdef __linux__
 	// TODO

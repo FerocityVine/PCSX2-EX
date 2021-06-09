@@ -225,40 +225,10 @@
     <ClCompile Include="Renderers\SW\GSSetupPrimCodeGenerator.x64.avx2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Renderers\OpenCL\GSRendererCL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GSDrawingContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSPng.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPU.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPUDrawScanline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPUDrawScanlineCodeGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPULocalMemory.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPURenderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPURendererSW.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPUSettingsDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPUSetupPrimCodeGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PSX\GPUState.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSLzma.cpp">
@@ -268,6 +238,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSGli.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DDS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -494,46 +467,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Renderers\OpenCL\GSRendererCL.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GSPng.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUDrawingEnvironment.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUDrawScanline.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUDrawScanlineCodeGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPULocalMemory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPURenderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPURendererSW.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUScanlineEnvironment.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUSettingsDlg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUSetupPrimCodeGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PSX\GPUVertex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSThread_CXX11.h">
@@ -546,6 +480,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSGli.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DDS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -567,9 +504,6 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="res\shadeboost.fx">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="res\tfx.cl">
       <Filter>Shaders</Filter>
     </None>
     <None Include="res\glsl\common_header.glsl">
@@ -609,5 +543,8 @@
     <Image Include="res\logo-null.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="res\fonts-roboto\Roboto-Regular.ttf" />
   </ItemGroup>
 </Project>

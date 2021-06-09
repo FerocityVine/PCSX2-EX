@@ -27,7 +27,8 @@
 
 class GSRendererDX11 final : public GSRendererHW
 {
-	enum ACC_BLEND_D3D11 {
+	enum ACC_BLEND_D3D11
+	{
 		ACC_BLEND_NONE_D3D11   = 0,
 		ACC_BLEND_BASIC_D3D11  = 1,
 		ACC_BLEND_MEDIUM_D3D11 = 2,
@@ -35,18 +36,16 @@ class GSRendererDX11 final : public GSRendererHW
 	};
 
 private:
-	bool UserHacks_AlphaStencil;
 	bool m_bind_rtsample;
 
 private:
 	inline void ResetStates();
 	inline void SetupIA(const float& sx, const float& sy);
-	inline void EmulateAtst(const int pass, const GSTextureCache::Source* tex);
 	inline void EmulateZbuffer();
 	inline void EmulateBlending();
 	inline void EmulateTextureShuffleAndFbmask();
 	inline void EmulateChannelShuffle(GSTexture** rt, const GSTextureCache::Source* tex);
-    inline void EmulateTextureSampler(const GSTextureCache::Source *tex, GSTexture *inp = nullptr);
+	inline void EmulateTextureSampler(const GSTextureCache::Source* tex, GSTexture* inp = nullptr);
 
 	GSDevice11::VSSelector m_vs_sel;
 	GSDevice11::GSSelector m_gs_sel;
@@ -64,7 +63,7 @@ public:
 	GSRendererDX11();
 	virtual ~GSRendererDX11() {}
 
-	void DrawPrims(GSTexture *rt, GSTexture *ds, GSTextureCache::Source *tex, GSTexture *inp = nullptr) final;
+	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex, GSTexture* inp = nullptr) final;
 
 	bool CreateDevice(GSDevice* dev);
 };

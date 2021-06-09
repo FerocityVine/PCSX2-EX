@@ -46,10 +46,11 @@ protected:
 
 public:
 	GSCaptureDlg();
+	void InvalidFile();
 
 	int m_width;
 	int m_height;
-	std::string m_filename;
+	std::wstring m_filename;
 	INT_PTR m_colorspace;
 	CComPtr<IBaseFilter> m_enc;
 };

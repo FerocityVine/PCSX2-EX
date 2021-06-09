@@ -21,6 +21,10 @@
 
 #include "stdafx.h"
 #include "GSUtil.h"
+#include <string>
+#include <locale>
+#include <codecvt>
+#include <iomanip>
 
 #ifdef _WIN32
 #include "Renderers/DX11/GSDevice11.h"
@@ -32,6 +36,38 @@
 #endif
 
 Xbyak::util::Cpu g_cpu;
+
+std::string GSUtil::GetHex32(uint32_t input)
+{
+    std::string _tempStr;
+    std::stringstream _convStream;
+
+    _convStream.seekg(0, std::ios::beg);
+    _convStream << std::setfill('0') << std::setw(8) << std::hex << input;
+
+    _tempStr = _convStream.str();
+    std::transform(_tempStr.begin(), _tempStr.end(), _tempStr.begin(), ::toupper);
+
+    return _tempStr;
+}
+
+int GSUtil::ConvertFormat(gli_format input)
+{
+    switch (input) {
+        case gli_format::FORMAT_RGBA_DXT1_UNORM_BLOCK8:
+            return DXGI_FORMAT_BC1_UNORM;
+        case gli_format::FORMAT_RGBA_DXT5_UNORM_BLOCK16:
+            return DXGI_FORMAT_BC3_UNORM;
+        case gli_format::FORMAT_RGBA_BP_UNORM_BLOCK16:
+            return DXGI_FORMAT_BC7_UNORM;
+        case gli_format::FORMAT_RGBA_DXT1_SRGB_BLOCK8:
+            return DXGI_FORMAT_BC1_UNORM_SRGB;
+        case gli_format::FORMAT_RGBA_DXT5_SRGB_BLOCK16:
+            return DXGI_FORMAT_BC3_UNORM_SRGB;
+        case gli_format::FORMAT_RGBA_BP_SRGB_BLOCK16:
+            return DXGI_FORMAT_BC7_UNORM_SRGB;
+    }
+}
 
 const char* GSUtil::GetLibName()
 {
@@ -83,10 +119,6 @@ const char* GSUtil::GetLibName()
 		"AVX", sw_sse
 #elif _M_SSE >= 0x401
 		"SSE4.1", sw_sse
-#elif _M_SSE >= 0x301
-		"SSSE3", sw_sse
-#elif _M_SSE >= 0x200
-		"SSE2", sw_sse
 #endif
 	);
 
@@ -130,7 +162,7 @@ public:
 
 		memset(CompatibleBitsField, 0, sizeof(CompatibleBitsField));
 
-		for(int i = 0; i < 64; i++)
+		for (int i = 0; i < 64; i++)
 		{
 			CompatibleBitsField[i][i >> 5] |= 1 << (i & 0x1f);
 		}
@@ -213,19 +245,14 @@ bool GSUtil::CheckSSE()
 {
 	bool status = true;
 
-	struct ISA {
+	struct ISA
+	{
 		Xbyak::util::Cpu::Type type;
 		const char* name;
 	};
 
 	ISA checks[] = {
-		{Xbyak::util::Cpu::tSSE2, "SSE2"},
-#if _M_SSE >= 0x301
-		{Xbyak::util::Cpu::tSSSE3, "SSSE3"},
-#endif
-#if _M_SSE >= 0x401
 		{Xbyak::util::Cpu::tSSE41, "SSE41"},
-#endif
 #if _M_SSE >= 0x500
 		{Xbyak::util::Cpu::tAVX, "AVX1"},
 #endif
@@ -236,8 +263,10 @@ bool GSUtil::CheckSSE()
 #endif
 	};
 
-	for (size_t i = 0; i < countof(checks); i++) {
-		if(!g_cpu.has(checks[i].type)) {
+	for (size_t i = 0; i < countof(checks); i++)
+	{
+		if (!g_cpu.has(checks[i].type))
+		{
 			fprintf(stderr, "This CPU does not support %s\n", checks[i].name);
 
 			status = false;
@@ -252,113 +281,7 @@ CRCHackLevel GSUtil::GetRecommendedCRCHackLevel(GSRendererType type)
 	return type == GSRendererType::OGL_HW ? CRCHackLevel::Partial : CRCHackLevel::Full;
 }
 
-#define OCL_PROGRAM_VERSION 3
-
-#ifdef ENABLE_OPENCL
-void GSUtil::GetDeviceDescs(std::list<OCLDeviceDesc>& dl)
-{
-	dl.clear();
-
-	try
-	{
-		std::vector<cl::Platform> platforms;
-
-		cl::Platform::get(&platforms);
-
-		for(auto& p : platforms)
-		{
-			std::string platform_vendor = p.getInfo<CL_PLATFORM_VENDOR>();
-
-			std::vector<cl::Device> ds;
-
-			p.getDevices(CL_DEVICE_TYPE_ALL, &ds);
-
-			for(auto& device : ds)
-			{
-				std::string type;
-
-				switch(device.getInfo<CL_DEVICE_TYPE>())
-				{
-				case CL_DEVICE_TYPE_GPU: type = "GPU"; break;
-				case CL_DEVICE_TYPE_CPU: type = "CPU"; break;
-				}
-
-				if(type.empty()) continue;
-
-				std::string version = device.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
-
-				int major = 0;
-				int minor = 0;
-
-				if(!type.empty() && sscanf(version.c_str(), "OpenCL C %d.%d", &major, &minor) == 2 && major == 1 && minor >= 1 || major > 1)
-				{
-					OCLDeviceDesc desc;
-
-					desc.device = device;
-					desc.name = GetDeviceUniqueName(device);
-					desc.version = major * 100 + minor * 10;
-
-					desc.tmppath = GStempdir() + "/" + desc.name;
-
-					GSmkdir(desc.tmppath.c_str());
-
-					desc.tmppath += "/" + std::to_string(OCL_PROGRAM_VERSION);
-
-					GSmkdir(desc.tmppath.c_str());
-
-					dl.push_back(desc);
-				}
-			}
-		}
-	}
-	catch(cl::Error err)
-	{
-		printf("%s (%d)\n", err.what(), err.err());
-	}
-}
-
-std::string GSUtil::GetDeviceUniqueName(cl::Device& device)
-{
-	std::string vendor = device.getInfo<CL_DEVICE_VENDOR>();
-	std::string name = device.getInfo<CL_DEVICE_NAME>();
-	std::string version = device.getInfo<CL_DEVICE_OPENCL_C_VERSION>();
-
-	std::string type;
-
-	switch(device.getInfo<CL_DEVICE_TYPE>())
-	{
-	case CL_DEVICE_TYPE_GPU: type = "GPU"; break;
-	case CL_DEVICE_TYPE_CPU: type = "CPU"; break;
-	}
-
-	version.erase(version.find_last_not_of(' ') + 1);
-
-	return vendor + " " + name + " " + version + " " + type;
-}
-#endif
-
 #ifdef _WIN32
-
-bool GSUtil::CheckDirectX()
-{
-	if (GSDevice11::LoadD3DCompiler())
-	{
-		GSDevice11::FreeD3DCompiler();
-		return true;
-	}
-
-	// User's system is likely broken if it fails and is Windows 8.1 or greater.
-	if (!IsWindows8Point1OrGreater())
-	{
-		printf("Cannot find d3dcompiler_43.dll\n");
-		if (MessageBox(nullptr, TEXT("You need to update some DirectX libraries, would you like to do it now?"), TEXT("GSdx"), MB_YESNO) == IDYES)
-		{
-			ShellExecute(nullptr, TEXT("open"), TEXT("https://www.microsoft.com/en-us/download/details.aspx?id=8109"), nullptr, nullptr, SW_SHOWNORMAL);
-		}
-	}
-	return false;
-}
-
 // ---------------------------------------------------------------------------------
 //  DX11 Detection (includes DXGI detection and dynamic library method bindings)
 // ---------------------------------------------------------------------------------
@@ -373,7 +296,7 @@ bool GSUtil::CheckDXGI()
 {
 	if (0 == s_DXGI)
 	{
-		HMODULE hmod = LoadLibrary("dxgi.dll");
+		HMODULE hmod = LoadLibrary(L"dxgi.dll");
 		s_DXGI = hmod ? 1 : -1;
 		if (hmod)
 			FreeLibrary(hmod);
@@ -389,7 +312,7 @@ bool GSUtil::CheckD3D11()
 
 	if (0 == s_D3D11)
 	{
-		HMODULE hmod = LoadLibrary("d3d11.dll");
+		HMODULE hmod = LoadLibrary(L"d3d11.dll");
 		s_D3D11 = hmod ? 1 : -1;
 		if (hmod)
 			FreeLibrary(hmod);
@@ -398,12 +321,12 @@ bool GSUtil::CheckD3D11()
 	return s_D3D11 > 0;
 }
 
-D3D_FEATURE_LEVEL GSUtil::CheckDirect3D11Level(IDXGIAdapter *adapter, D3D_DRIVER_TYPE type)
+D3D_FEATURE_LEVEL GSUtil::CheckDirect3D11Level(IDXGIAdapter* adapter, D3D_DRIVER_TYPE type)
 {
 	HRESULT hr;
 	D3D_FEATURE_LEVEL level;
 
-	if(!CheckD3D11())
+	if (!CheckD3D11())
 		return (D3D_FEATURE_LEVEL)0;
 
 	hr = D3D11CreateDevice(adapter, type, NULL, 0, NULL, 0, D3D11_SDK_VERSION, NULL, &level, NULL);
@@ -434,16 +357,20 @@ GSRendererType GSUtil::GetBestRenderer()
 
 #endif
 
-void GSmkdir(const char* dir)
-{
 #ifdef _WIN32
-	if (!CreateDirectory(dir, nullptr)) {
+void GSmkdir(const wchar_t* dir)
+{
+	if (!CreateDirectory(dir, nullptr))
+	{
 		DWORD errorID = ::GetLastError();
-		if (errorID != ERROR_ALREADY_EXISTS) {
-			fprintf(stderr, "Failed to create directory: %s error %u\n", dir, errorID);
+		if (errorID != ERROR_ALREADY_EXISTS)
+		{
+			fprintf(stderr, "Failed to create directory: %ls error %u\n", dir, errorID);
 		}
 	}
 #else
+void GSmkdir(const char* dir)
+{
 	int err = mkdir(dir, 0777);
 	if (!err && errno != EEXIST)
 		fprintf(stderr, "Failed to create directory: %s\n", dir);
@@ -453,9 +380,13 @@ void GSmkdir(const char* dir)
 std::string GStempdir()
 {
 #ifdef _WIN32
-	char path[MAX_PATH + 1];
+	wchar_t path[MAX_PATH + 1];
 	GetTempPath(MAX_PATH, path);
-	return {path};
+	std::wstring tmp(path);
+	using convert_type = std::codecvt_utf8<wchar_t>;
+	std::wstring_convert<convert_type, wchar_t> converter;
+
+	return converter.to_bytes(tmp);
 #else
 	return "/tmp";
 #endif
@@ -463,7 +394,8 @@ std::string GStempdir()
 
 const char* psm_str(int psm)
 {
-	switch(psm) {
+	switch (psm)
+	{
 		// Normal color
 		case PSM_PSMCT32:  return "C_32";
 		case PSM_PSMCT24:  return "C_24";
@@ -483,7 +415,7 @@ const char* psm_str(int psm)
 		case PSM_PSMZ16:   return "Z_16";
 		case PSM_PSMZ16S:  return "Z_16S";
 
-		case PSM_PSGPU24:     return "PS24";
+		case PSM_PSGPU24:  return "PS24";
 
 		default:break;
 	}

@@ -38,22 +38,23 @@ class GSRenderer : public GSState
 	bool m_control_key;
 
 protected:
+	int m_dithering;
 	int m_interlace;
 	int m_aspectratio;
 	int m_vsync;
+    int m_texture_option;
+    int m_texture_mode;
 	bool m_aa1;
 	bool m_shaderfx;
 	bool m_fxaa;
 	bool m_shadeboost;
 	bool m_texture_shuffle;
-    
 	GSVector2i m_real_size;
 
 	virtual GSTexture* GetOutput(int i, int& y_offset) = 0;
 	virtual GSTexture* GetFeedbackOutput() { return nullptr; }
 
 public:
-    bool m_texture_funcs, m_texture_replace, m_texture_extract;
 	std::shared_ptr<GSWnd> m_wnd;
 	GSDevice* m_dev;
 
@@ -66,15 +67,14 @@ public:
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const std::string& path);
 	virtual void KeyEvent(GSKeyEventData* e);
-	virtual bool CanUpscale() {return false;}
-	virtual int GetUpscaleMultiplier() {return 1;}
-	virtual GSVector2i GetCustomResolution() {return GSVector2i(0,0);}
+	virtual bool CanUpscale() { return false; }
+	virtual int GetUpscaleMultiplier() { return 1; }
+	virtual GSVector2i GetCustomResolution() { return GSVector2i(0, 0); }
 	GSVector2i GetInternalResolution();
-	void SetAspectRatio(int aspect) {m_aspectratio = aspect;}
+	void SetAspectRatio(int aspect) { m_aspectratio = aspect; }
 	void SetVSync(int vsync);
-	virtual void SetExclusive(bool isExcl) {}
 
-	virtual bool BeginCapture();
+	virtual bool BeginCapture(std::string& filename);
 	virtual void EndCapture();
 
 	void PurgePool();
