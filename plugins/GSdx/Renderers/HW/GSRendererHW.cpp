@@ -1740,25 +1740,40 @@ void GSRendererHW::Draw()
 
         _path = "textures\\";
 
-        auto const _h = (1 << m_context->TEX0.TH);
-        auto const _w = (1 << m_context->TEX0.TW);
+        auto const _h = (1 << m_src->m_TEX0.TH);
+        auto const _w = (1 << m_src->m_TEX0.TW);
 
-        auto const _fW = m_src->m_write.rect->right;
+		auto const _fW = m_src->m_write.rect->right;
         auto const _fH = m_src->m_write.rect->bottom;
+        
+        auto _rect = GSVector4i(0, 0);
 
-        auto _pitch = _w * 4;
-        auto _length = _pitch * _h;
-        auto _rect = GSVector4i(0, 0, _w, _h);
+		if (m_texture_mode == 0)
+            _rect = GSVector4i(0, 0, _w, _h);
 
-		if (m_texture_mode == 1) {
-            _pitch = _fW * 4;
-            _length = _pitch * _fH;
+		if (((_w != _h && ((_w <= 512 && _h >= 1024) || (_w >= 512 && _h <= 1024))) || (_fW <= 32 || _fH <= 32)) && (m_context->CLAMP.MAXU > 0 || m_context->CLAMP.MINU > 0)) {
+            auto _pU = m_context->CLAMP.MAXU > 0 ? m_context->CLAMP.MAXU : m_context->CLAMP.MINU;
+            auto _pV = m_context->CLAMP.MAXV > 0 ? m_context->CLAMP.MAXV : m_context->CLAMP.MINV;
+
+			if (_pV % 32 != 0)
+                _pV = floor((_pV + 32 - 1) / 32) * 32;
+
+			if (_pU % 32 != 0)
+                _pU = floor((_pU + 32 - 1) / 32) * 32;
+
+            _rect = GSVector4i(0, 0, _pU, _pV);
+        }
+
+		else if (m_texture_mode == 1 || (_w == _h && _h >= 512)) {
             _rect = GSVector4i(0, 0, _fW, _fH);
         }
 
+		auto _pitch = _rect.z * 4;
+        auto _length = _rect.w * _pitch;
+
 		void *_data = _aligned_malloc(_length, 32);
         auto _pointer = static_cast<uint8 *>(_data);
-        const GSOffset *_offset = m_mem.GetOffset(m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM);
+        const GSOffset *_offset = m_mem.GetOffset(m_src->m_TEX0.TBP0, m_src->m_TEX0.TBW, m_src->m_TEX0.PSM);
 
         m_mem.ReadTexture(_offset, _rect, _pointer, _pitch, m_src->m_TEXA);
         _currentChecksum = xxhash<32>(_pointer, _length);
@@ -1788,9 +1803,9 @@ void GSRendererHW::Draw()
                             auto const _rectR = GSVector4i(0, 0, _ddsFile.Header.dwWidth, _ddsFile.Header.dwHeight);
                             _tex->Update(_rectR, _dataR.data(), _pitchR, 0);
 
-							if (m_texture_mode == 1) {
-                                int const _wt = (1 << m_context->TEX0.TW) / _fW;
-                                int const _ht = (1 << static_cast<uint32>(m_context->TEX0.TH)) / _fH;
+							if (m_texture_mode != 0) {
+                                int const _wt = (1 << m_src->m_TEX0.TW) / _rect.z;
+                                int const _ht = (1 << static_cast<uint32>(m_src->m_TEX0.TH)) / _rect.w;
 
                                 auto _wD = _wt * _ddsFile.Header.dwWidth;
                                 auto _hD = _ht * _ddsFile.Header.dwHeight;
@@ -1827,24 +1842,32 @@ void GSRendererHW::Draw()
                 .append(".dds");
 
             if (stat(_path.c_str(), &_statBuf) != 0) {
-
-                if (m_context->TEX0.TCC == 0)
+                if (m_src->m_TEX0.TCC == 0)
                     for (int i = 3; i < _length; i += 4)
                         _pointer[i] = 255;
 
                 auto _tex = m_dev->CreateTexture(_w, _h);
                 _tex->Update(_rect, _data, _pitch);
 
-				if (m_texture_mode == 1) {
-                    auto const _uvRect = GSVector4i(0, 0, _fW, _fH);
-                    auto _texSave = m_dev->CreateTexture(_fW, _fH);
+				if (m_texture_mode == 0)
+					_tex->SaveDDS(_path);
 
-                    m_dev->CopyRect(_tex, _texSave, _uvRect);
+				else 
+				{
+                    auto _bW = _rect.z;
+                    auto _bH = _rect.w;
+
+                    if (ceil(log2(_bW)) != floor(log2(_bW)))
+                        _bW = pow(2, ceil(log(_bW) / log(2)));
+
+                    if (ceil(log2(_bH)) != floor(log2(_bH)))
+                        _bH = pow(2, ceil(log(_bH) / log(2)));
+
+					auto _texSave = m_dev->CreateTexture(_bW, _bH);
+
+                    m_dev->CopyRect(_tex, _texSave, _rect);
                     _texSave->SaveDDS(_path);
                 }
-
-                else
-                    _tex->SaveDDS(_path);
             }
         }
 
